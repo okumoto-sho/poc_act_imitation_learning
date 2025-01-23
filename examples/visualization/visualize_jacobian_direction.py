@@ -23,7 +23,7 @@ def main():
   )
   robot: RigidEntity = scene.add_entity(
       gs.morphs.URDF(
-          file  = './urdf/koch11.urdf',
+          file  = './assets/urdf/koch11.urdf',
           pos   = (0.0, 0.0, 0.0),
           euler = (0, 0, 0),
           fixed=True
