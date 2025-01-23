@@ -4,8 +4,8 @@ import time
 
 from genesis.engine.entities.rigid_entity import RigidEntity
 from koch11.core.kinematics.kinematics import (
-    forward_kinematics,
-    inverse_kienmatics_xyz_rpy,
+    forward_kinematics_xyz_rpy,
+    inverse_kienmatics,
 )
 from koch11.dynamixel.koch11 import dh_params
 
@@ -42,22 +42,23 @@ direction = 1
 dofs_index = [0, 1, 2, 3, 4]
 delta = 0.01
 q = np.array([0.0, np.deg2rad(10.0), np.deg2rad(45.0), np.deg2rad(90.0), 0.0])
-pos = forward_kinematics(dh_params, q)[0:3, 3]
-dpos = np.array([0.0, 0.0, 0.001])
+pos = forward_kinematics_xyz_rpy(dh_params, q)
+pos[4] = np.deg2rad(30.0)
+dpos = np.array([0.001, 0.001, 0.0, 0.0, 0.0, 0.0])
 epsilon = 1e-6
 
 print(pos)
 while 1:
-    if ((pos + dpos)[2] > 0.18 and pos[2] < 0.18) or (
-        (pos + dpos)[2] < 0.0 and pos[2] > 0.0
+    if ((pos + dpos)[0] > 0.15 and pos[0] < 0.15) or (
+        (pos + dpos)[0] < 0.03 and pos[0] > 0.03
     ):
         dpos *= -1
 
     pos += dpos
 
     start = time.time()
-    q = inverse_kienmatics_xyz_rpy(
-        dh_params, pos, q, xyz_convergence_tolerance=0.0001, update_step=1.0
+    q = inverse_kienmatics(
+        dh_params, pos[0:3], None, q, xyz_convergence_tolerance=0.0001, update_step=1.0
     )
     end = time.time()
     print(f"{(end - start) * 1000} {robot.get_links_pos()[4]}")
