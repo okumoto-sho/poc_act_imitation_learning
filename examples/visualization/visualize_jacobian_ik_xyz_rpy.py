@@ -58,7 +58,12 @@ while 1:
 
     start = time.time()
     q = inverse_kienmatics(
-        dh_params, pos[0:3], None, q, xyz_convergence_tolerance=0.0001, update_step=1.0
+        dh_params,
+        pos[0:3],
+        np.array([0.0, 0.0, 0.0]),
+        q,
+        xyz_convergence_tolerance=0.0001,
+        update_step=1.0,
     )
     end = time.time()
     print(f"{(end - start) * 1000} {robot.get_links_pos()[4]}")
