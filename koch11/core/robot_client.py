@@ -17,7 +17,7 @@ class QRange:
     max: np.ndarray
 
 
-class RobotClient(ABC):
+class RobotClient:
     _not_implemented_message: str = "This function is not implemented"
 
     def make_control_enable(self):
