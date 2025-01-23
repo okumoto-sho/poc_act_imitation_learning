@@ -1,10 +1,10 @@
 import numpy as np
 
 from typing import List, Any
-from core.robot_client import RobotClient, OperatingMode, QRange
-from core.kinematics.kinematics import DhParam, forward_kinematics, forward_kinematics_all_links, calculate_basic_jacobian_xyz
-from core.kinematics.math_utils import transform_to_xyz_rpy
-from dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
+from koch11.core.robot_client import RobotClient, OperatingMode, QRange
+from koch11.core.kinematics.kinematics import DhParam, forward_kinematics, forward_kinematics_all_links, calculate_basic_jacobian_xyz
+from koch11.core.kinematics.math_utils import transform_to_xyz_rpy
+from koch11.dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
 
 
 class DynamixelRobotClient(RobotClient):
@@ -43,6 +43,10 @@ class DynamixelRobotClient(RobotClient):
     
   def make_control_disable(self):
     self.client.sync_write(self.motor_ids, ControlTable.TorqueEnable, [0] * len(self.motor_ids), self.retry_num)
+      
+  def is_control_enabled(self):
+    ret = self.client.sync_read(self.motor_ids, ControlTable.TorqueEnable, self.retry_num)
+    return all([x == 1 for x in ret])
       
   def forward_kinematics(self, q: np.ndarray, ee_transform: np.ndarray = np.identity(4)):
     self._check_data_length(q)

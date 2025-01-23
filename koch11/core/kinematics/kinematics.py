@@ -2,7 +2,7 @@ import numpy as np
 import dataclasses
 
 from typing import List
-from core.kinematics.math_utils import rotation_matrix_x, rotation_matrix_y, rotation_matrix_z, translation_matrix
+from koch11.core.kinematics.math_utils import rotation_matrix_x, rotation_matrix_y, rotation_matrix_z, translation_matrix
 from numpy.typing import ArrayLike
 
 @dataclasses.dataclass

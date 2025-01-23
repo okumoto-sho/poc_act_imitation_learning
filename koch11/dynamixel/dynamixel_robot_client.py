@@ -1,9 +1,9 @@
 import numpy as np
 
-from dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
+from koch11.dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
 from enum import IntEnum
 from typing import List, Any
-from core.robot_client import OperatingMode
+from koch11.core.robot_client import OperatingMode
 
 class DynamixelRobotClient:
   def __init__(self, motor_ids: List[int], port_name='/dev/ttyACM1', baud_rate=2000000, retry_num=30):

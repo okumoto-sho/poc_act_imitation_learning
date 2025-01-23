@@ -1,7 +1,7 @@
 import numpy as np
 
-from core.kinematics.kinematics import DhParam
-from dynamixel.robot_client import DynamixelRobotClient
+from koch11.core.kinematics.kinematics import DhParam
+from koch11.dynamixel.robot_client import DynamixelRobotClient
 
 dh_params = [
   DhParam(0.0, 0.0, 0.0533, 0.0),
