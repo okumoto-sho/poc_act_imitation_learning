@@ -3,7 +3,7 @@ import genesis as gs
 
 from typing import List
 from genesis.engine.entities.rigid_entity import RigidEntity
-from koch11.core.kinematics.kinematics import forward_kinematics_all_links, calculate_basic_jacobian_xyz
+from koch11.core.kinematics.kinematics import forward_kinematics_all_links, calculate_basic_jacobian_xyz_omega
 from koch11.dynamixel.koch11 import dh_params
 from koch11.core.kinematics.math_utils import rotation_around_axis, transform_to_quat, quat_to_rotation_matrix, quat_around_axis
 
@@ -44,7 +44,7 @@ def main():
     
     scene.clear_debug_objects()
     fk_all_links = forward_kinematics_all_links(dh_params, q)
-    jacobian = calculate_basic_jacobian_xyz(dh_params, q)
+    jacobian = calculate_basic_jacobian_xyz_omega(dh_params, q)
     dpos = jacobian @ dq
     print(f"{jacobian} {dpos}")
     scene.draw_debug_arrow(fk_all_links[-1][0:3, 3], 100.0 * dpos)

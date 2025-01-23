@@ -10,9 +10,11 @@ mean_elapsed = 0
 N = 1000
 for i in tqdm.tqdm(range(N)):
     start = time.time()
-    data = client.sync_read(motor_ids=motor_ids, control_table=ControlTable.PresentPosition)
+    data = client.sync_read(
+        motor_ids=motor_ids, control_table=ControlTable.PresentPosition
+    )
     end = time.time()
-    mean_elapsed +=  (end - start) * 1000.0 / N
+    mean_elapsed += (end - start) * 1000.0 / N
     print(np.array(data) * 360.0 / 4096)
 
 print(mean_elapsed)
