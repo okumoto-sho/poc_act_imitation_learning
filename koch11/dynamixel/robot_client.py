@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from typing import List, Any
 from koch11.core.robot_client import RobotClient, OperatingMode
@@ -7,9 +8,17 @@ from koch11.core.kinematics.kinematics import (
     forward_kinematics,
     forward_kinematics_all_links,
     calculate_basic_jacobian_xyz_omega,
+    inverse_kienmatics,
 )
 from koch11.core.kinematics.math_utils import transform_to_xyz_rpy
 from koch11.dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
+
+
+def plan_q_trajectory(q, target_q, max_speed: float, control_cycle: float):
+    max_diff_q = np.max(np.abs(target_q - q))
+    num_steps = int(max_diff_q / (control_cycle * max_speed)) + 2
+    q_traj = np.linspace(q, target_q, num_steps)
+    return q_traj
 
 
 class DynamixelRobotClient(RobotClient):
@@ -17,8 +26,8 @@ class DynamixelRobotClient(RobotClient):
         self,
         motor_ids: List[int],
         dh_params: List[DhParam],
-        q_range: np.ndarray,
-        dq_range: np.ndarray,
+        q_range: dict,
+        dq_range: dict,
         q_offsets=np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi]),
         port_name="/dev/ttyACM0",
         baud_rate=2000000,
@@ -55,6 +64,41 @@ class DynamixelRobotClient(RobotClient):
         rev_per_min_pwm = (rev_per_min / 0.229).astype(np.int32)
         return rev_per_min_pwm
 
+    def _contained_in_range_q(self, q: np.ndarray):
+        return np.all(q >= self.q_range["min"]) and np.all(q <= self.q_range["max"])
+
+    def _contained_in_range_dq(self, dq: np.ndarray):
+        return np.all(dq >= self.dq_range["min"]) and np.all(dq <= self.dq_range["max"])
+
+    def _check_range_q(self, q: np.ndarray):
+        if not self._contained_in_range_q(q):
+            raise ValueError("q is out of range")
+
+    def _check_range_dq(self, dq: np.ndarray):
+        if not self._contained_in_range_dq(dq):
+            raise ValueError("dq is out of range")
+
+    def _try_make_q_contained_in_range_q(self, q: np.ndarray):
+        def _try_contained(q_i: float, q_min: float, q_max: float):
+            print(q_i)
+            if q_min <= q_i <= q_max:
+                return q_i
+            elif q_i - 2.0 * np.pi > q_min:
+                return q_i - 2.0 * np.pi
+            elif q_i + 2.0 * np.pi < q_max:
+                return q_i + 2.0 * np.pi
+            return q_i
+
+        q_mod = np.fmod(q, 2 * np.pi)
+        return np.array(
+            [
+                _try_contained(q_i, q_min, q_max)
+                for q_i, q_min, q_max in zip(
+                    q_mod, self.q_range["min"], self.q_range["max"]
+                )
+            ]
+        )
+
     def make_control_enable(self):
         self.client.sync_write(
             self.motor_ids,
@@ -71,11 +115,84 @@ class DynamixelRobotClient(RobotClient):
             self.retry_num,
         )
 
+    def move_q(
+        self,
+        q: np.ndarray,
+        speed: float = 0.4,
+        convergence_timeout_seconds=4.0,
+        atol=0.01,
+    ):
+        self._check_data_length(q)
+        self._check_range_q(q)
+        current_q = self.get_present_q()
+        trajectory_q = plan_q_trajectory(current_q, q, speed, self.control_cycle)
+        for q in trajectory_q:
+            self.servo_q(q)
+
+        start = time.time()
+        while time.time() - start < convergence_timeout_seconds and np.allclose(
+            current_q, q, atol=atol
+        ):
+            current_q = self.get_present_q()
+
+    def move_q_ik(
+        self,
+        xyz: np.ndarray | None,
+        rpy: np.ndarray | None,
+        speed: float = 0.4,
+        ee_transform: np.ndarray = np.identity(4),
+        convergence_timeout_seconds=4.0,
+        xyz_convergence_tol=0.001,
+        rpy_convergence_tol=0.001,
+        atol=0.01,
+    ):
+        q = self.inverse_kinematics(
+            xyz,
+            rpy,
+            self.get_present_q(),
+            ee_transform,
+            xyz_convergence_tol,
+            rpy_convergence_tol,
+        )
+        if q is None:
+            raise RuntimeError("Failed to obtain inverse kinematics solution")
+        self.move_q(q, speed, convergence_timeout_seconds, atol)
+
     def is_control_enabled(self):
         ret = self.client.sync_read(
             self.motor_ids, ControlTable.TorqueEnable, self.retry_num
         )
         return all([x == 1 for x in ret])
+
+    def inverse_kinematics(
+        self,
+        xyz: np.ndarray | None,
+        rpy: np.ndarray | None,
+        init_q: np.ndarray,
+        ee_transform: np.ndarray = np.identity(4),
+        xyz_convergence_tol=0.001,
+        rpy_convergence_tol=0.001,
+    ):
+        q = inverse_kienmatics(
+            self.dh_params,
+            xyz,
+            rpy,
+            init_q,
+            ee_transform,
+            update_step=1,
+            xyz_convergence_tolerance=xyz_convergence_tol,
+            rpy_convergence_tolerance=rpy_convergence_tol,
+        )
+        q = np.fmod(q, 2 * np.pi)
+        if q is None:
+            print("Inverse kinematics did not converge")
+            return None
+
+        q = self._try_make_q_contained_in_range_q(q)
+        if not self._contained_in_range_q(q):
+            print(f"Inverse kinematics solution {q} is out of range")
+            return None
+        return q
 
     def forward_kinematics(
         self, q: np.ndarray, ee_transform: np.ndarray = np.identity(4)
@@ -98,18 +215,26 @@ class DynamixelRobotClient(RobotClient):
         return calculate_basic_jacobian_xyz_omega(self.dh_params, q)
 
     def servo_q(self, q: np.ndarray):
+        start = time.time()
         self._check_data_length(q)
+        self._check_range_q(q)
         q = self._q_radians_to_pwm(q)
         self.client.sync_write(
             self.motor_ids, ControlTable.GoalPosition, q, self.retry_num
         )
+        end = time.time()
+        time.sleep(max(0, self.control_cycle - (end - start)))
 
     def servo_dq(self, dq: np.ndarray):
+        start = time.time()
         self._check_data_length(dq)
+        self._check_range_dq(dq)
         dq = self._dq_radians_to_pwm(dq)
         self.client.sync_write(
             self.motor_ids, ControlTable.GoalVelocity, dq, self.retry_num
         )
+        end = time.time()
+        time.sleep(max(0, self.control_cycle - (end - start)))
 
     def set_q_p_gains(self, p_gains: np.ndarray):
         self._check_data_length(p_gains)
