@@ -83,7 +83,10 @@ def transform_to_xyz_rpy(T: np.array):
 
 def rotation_matrix_to_axis_and_angle(matrix: np.array):
     trace = matrix[0, 0] + matrix[1, 1] + matrix[2, 2]
-    radians = np.arccos((trace - 1) / 2.0)
+    cos_cliped = np.clip((trace - 1) / 2.0, -1.0, 1.0)
+    radians = np.arccos(cos_cliped)
+    if (trace - 1) / 2.0 > 1.0 or (trace - 1) / 2.0 < -1.0:
+        print((trace - 1) / 2.0)
     axis = -np.array(
         [
             matrix[1, 2] - matrix[2, 1],

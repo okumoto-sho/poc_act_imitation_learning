@@ -12,8 +12,10 @@ dh_params = [
 ]
 
 q_range = {
-    "min": np.array([-np.pi / 2, -np.pi / 2, -np.pi / 2, -7 * np.pi / 10, -np.pi]),
-    "max": np.array([np.pi / 2, np.pi / 2, np.pi / 2, 7 * np.pi / 10, np.pi]),
+    "min": np.array(
+        [-np.pi / 2, -np.pi / 2 - 0.1, -np.pi / 2 - 0.1, -7 * np.pi / 10, -np.pi]
+    ),
+    "max": np.array([np.pi / 2, np.pi / 2 + 0.1, np.pi, 7 * np.pi / 10, np.pi]),
 }
 
 dq_range = {

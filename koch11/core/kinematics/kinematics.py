@@ -9,6 +9,8 @@ from koch11.core.kinematics.math_utils import (
     rotation_matrix_rpy,
     rotation_matrix_to_axis_and_angle,
     transform_to_xyz_rpy,
+    rotation_around_axis,
+    rotation_matrix_to_rpy_radians,
 )
 
 
@@ -31,7 +33,8 @@ def forward_kinematics_xyz_rpy(
     dh_params: List[DhParam], q_radians, ee_transform=np.identity(4)
 ):
     fk_all_links = forward_kinematics_all_links(dh_params, q_radians, ee_transform)
-    return transform_to_xyz_rpy(fk_all_links[-1])
+    xyz_rpy = transform_to_xyz_rpy(fk_all_links[-1])
+    return xyz_rpy[0:3], xyz_rpy[3:6]
 
 
 def forward_kinematics_all_links(
@@ -234,3 +237,97 @@ def inverse_kienmatics(
         return None
 
     return q
+
+
+def plan_ik_q_trajectory(
+    dh_params: List[DhParam],
+    xyz_path: List[np.ndarray] | None,
+    rpy_path: List[np.ndarray] | None,
+    q_init: np.ndarray,
+    control_cycle: float,
+    ee_transform=np.identity(4),
+    update_step=1.0,
+    max_iter=1000,
+    xyz_convergence_tolerance=0.00001,
+    rpy_convergence_tolerance=0.001,
+    xyz_max_speed=0.1,
+    rpy_max_speed=1.55,
+    epsilon=1e-5,
+) -> List[np.ndarray]:
+    fk = forward_kinematics(dh_params, q_init, ee_transform)
+    init_xyz, init_rot = fk[0:3, 3], fk[0:3, 0:3]
+    final_q_path = []
+
+    if xyz_path is None and rpy_path is None:
+        raise ValueError("At least one of xyz_path or rpy_path must be given")
+
+    if xyz_path is None:
+        prev_rot = init_rot
+        for i in range(len(rpy_path)):
+            cur_rpy = rpy_path[i]
+            cur_rot = rotation_matrix_rpy(cur_rpy[0], cur_rpy[1], cur_rpy[2])[0:3, 0:3]
+            diff_axis, diff_degrees = rotation_matrix_to_axis_and_angle(
+                cur_rot @ prev_rot.T
+            )
+            time_diff = np.abs(diff_degrees) / rpy_max_speed
+            num_steps = int(time_diff / control_cycle)
+            diff_degrees_per_step = diff_degrees / num_steps
+            for t in range(num_steps):
+                targ_rpy = rotation_matrix_to_rpy_radians(
+                    rotation_around_axis(diff_axis, diff_degrees_per_step * (t + 1))[
+                        0:3, 0:3
+                    ]
+                    @ prev_rot,
+                    yaw_radians_on_singular=0.0,
+                )
+                q = inverse_kienmatics(
+                    dh_params,
+                    None,
+                    targ_rpy,
+                    q_init,
+                    ee_transform,
+                    update_step,
+                    max_iter,
+                    xyz_convergence_tolerance,
+                    rpy_convergence_tolerance,
+                    epsilon,
+                )
+                if q is None:
+                    print("Failed to plan path using inverse kinematics")
+                    return None
+                final_q_path.append(q)
+                q_init = q
+            prev_rot = cur_rot
+
+    elif rpy_path is None:
+        prev_xyz = init_xyz
+        for i in range(len(xyz_path)):
+            cur_xyz = xyz_path[i]
+            time_diff = np.linalg.norm(cur_xyz - prev_xyz) / xyz_max_speed
+            num_steps = int(time_diff / control_cycle)
+            if num_steps == 0:
+                continue
+            diff_xyz = (cur_xyz - prev_xyz) / num_steps
+            for t in range(num_steps):
+                q = inverse_kienmatics(
+                    dh_params,
+                    prev_xyz + diff_xyz * (t + 1),
+                    None,
+                    q_init,
+                    ee_transform,
+                    update_step,
+                    max_iter,
+                    xyz_convergence_tolerance,
+                    rpy_convergence_tolerance,
+                    epsilon,
+                )
+                if q is None:
+                    print("Failed to plan path using inverse kinematics")
+                    return None
+                final_q_path.append(q)
+                q_init = q
+            prev_xyz = cur_xyz
+    else:
+        pass
+
+    return final_q_path

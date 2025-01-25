@@ -9,6 +9,7 @@ from koch11.core.kinematics.kinematics import (
     forward_kinematics_all_links,
     calculate_basic_jacobian_xyz_omega,
     inverse_kienmatics,
+    plan_ik_q_trajectory,
 )
 from koch11.core.kinematics.math_utils import transform_to_xyz_rpy
 from koch11.dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
@@ -72,7 +73,7 @@ class DynamixelRobotClient(RobotClient):
 
     def _check_range_q(self, q: np.ndarray):
         if not self._contained_in_range_q(q):
-            raise ValueError("q is out of range")
+            raise ValueError(f"q: {q} is out of range")
 
     def _check_range_dq(self, dq: np.ndarray):
         if not self._contained_in_range_dq(dq):
@@ -124,16 +125,7 @@ class DynamixelRobotClient(RobotClient):
     ):
         self._check_data_length(q)
         self._check_range_q(q)
-        current_q = self.get_present_q()
-        trajectory_q = plan_q_trajectory(current_q, q, speed, self.control_cycle)
-        for q in trajectory_q:
-            self.servo_q(q)
-
-        start = time.time()
-        while time.time() - start < convergence_timeout_seconds and np.allclose(
-            current_q, q, atol=atol
-        ):
-            current_q = self.get_present_q()
+        self.move_q_path([q], speed, convergence_timeout_seconds, atol)
 
     def move_q_ik(
         self,
@@ -157,6 +149,56 @@ class DynamixelRobotClient(RobotClient):
         if q is None:
             raise RuntimeError("Failed to obtain inverse kinematics solution")
         self.move_q(q, speed, convergence_timeout_seconds, atol)
+
+    def move_p(
+        self,
+        xyz: np.ndarray | None,
+        rpy: np.ndarray | None,
+        ee_transform: np.ndarray = np.identity(4),
+        xyz_max_speed=0.1,
+        rpy_max_speed=1.55,
+        convergence_timeout_seconds=4.0,
+        xyz_convergence_tol=0.001,
+        rpy_convergence_tol=0.001,
+        atol=0.01,
+    ):
+        q_path = plan_ik_q_trajectory(
+            self.dh_params,
+            [xyz] if xyz is not None else None,
+            [rpy] if rpy is not None else None,
+            self.get_present_q(),
+            self.control_cycle,
+            ee_transform=ee_transform,
+            xyz_max_speed=xyz_max_speed,
+            rpy_max_speed=rpy_max_speed,
+            xyz_convergence_tolerance=xyz_convergence_tol,
+            rpy_convergence_tolerance=rpy_convergence_tol,
+        )
+        self.move_q_path(q_path, 30.0, convergence_timeout_seconds, atol)
+
+    def move_q_path(
+        self,
+        q_path: List[np.ndarray],
+        speed: float,
+        convergence_timeout_seconds=4.0,
+        atol=0.01,
+    ):
+        current_q = self.get_present_q()
+        for q in q_path:
+            diff_q = q - current_q
+            times_taken = np.max(np.abs(diff_q)) / speed
+            num_steps = int(times_taken / self.control_cycle) + 2
+            step_q = diff_q / num_steps
+            for t in range(num_steps):
+                target_q = current_q + step_q * t
+                self.servo_q(target_q)
+            current_q = q
+
+        start = time.time()
+        while time.time() - start < convergence_timeout_seconds and not np.allclose(
+            current_q, q_path[-1], atol=atol
+        ):
+            current_q = self.get_present_q()
 
     def is_control_enabled(self):
         ret = self.client.sync_read(
@@ -183,11 +225,11 @@ class DynamixelRobotClient(RobotClient):
             xyz_convergence_tolerance=xyz_convergence_tol,
             rpy_convergence_tolerance=rpy_convergence_tol,
         )
-        q = np.fmod(q, 2 * np.pi)
         if q is None:
             print("Inverse kinematics did not converge")
             return None
 
+        q = np.fmod(q, 2 * np.pi)
         q = self._try_make_q_contained_in_range_q(q)
         if not self._contained_in_range_q(q):
             print(f"Inverse kinematics solution {q} is out of range")
