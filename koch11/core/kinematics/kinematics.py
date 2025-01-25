@@ -251,7 +251,7 @@ def plan_ik_q_trajectory(
     xyz_convergence_tolerance=0.00001,
     rpy_convergence_tolerance=0.001,
     xyz_max_speed=0.1,
-    rpy_max_speed=1.55,
+    rpy_max_speed=4.55,
     epsilon=1e-5,
 ) -> List[np.ndarray]:
     fk = forward_kinematics(dh_params, q_init, ee_transform)
@@ -270,9 +270,9 @@ def plan_ik_q_trajectory(
                 cur_rot @ prev_rot.T
             )
             time_diff = np.abs(diff_degrees) / rpy_max_speed
-            num_steps = int(time_diff / control_cycle)
-            diff_degrees_per_step = diff_degrees / num_steps
-            for t in range(num_steps):
+            num_steps_rpy = int(time_diff / control_cycle) + 2
+            diff_degrees_per_step = diff_degrees / num_steps_rpy
+            for t in range(num_steps_rpy):
                 targ_rpy = rotation_matrix_to_rpy_radians(
                     rotation_around_axis(diff_axis, diff_degrees_per_step * (t + 1))[
                         0:3, 0:3
@@ -298,17 +298,16 @@ def plan_ik_q_trajectory(
                 final_q_path.append(q)
                 q_init = q
             prev_rot = cur_rot
-
     elif rpy_path is None:
         prev_xyz = init_xyz
         for i in range(len(xyz_path)):
             cur_xyz = xyz_path[i]
             time_diff = np.linalg.norm(cur_xyz - prev_xyz) / xyz_max_speed
-            num_steps = int(time_diff / control_cycle)
-            if num_steps == 0:
+            num_steps_rpy = int(time_diff / control_cycle) + 2
+            if num_steps_rpy == 0:
                 continue
-            diff_xyz = (cur_xyz - prev_xyz) / num_steps
-            for t in range(num_steps):
+            diff_xyz = (cur_xyz - prev_xyz) / num_steps_rpy
+            for t in range(num_steps_rpy):
                 q = inverse_kienmatics(
                     dh_params,
                     prev_xyz + diff_xyz * (t + 1),
@@ -328,6 +327,58 @@ def plan_ik_q_trajectory(
                 q_init = q
             prev_xyz = cur_xyz
     else:
-        pass
+        if len(xyz_path) != len(rpy_path):
+            raise ValueError("Given different length xyz_path and rpy_path")
+
+        prev_xyz = init_xyz
+        prev_rot = init_rot
+        for i in range(len(rpy_path)):
+            cur_rpy = rpy_path[i]
+            cur_xyz = xyz_path[i]
+            cur_rot = rotation_matrix_rpy(cur_rpy[0], cur_rpy[1], cur_rpy[2])[0:3, 0:3]
+            diff_axis, diff_degrees = rotation_matrix_to_axis_and_angle(
+                cur_rot @ prev_rot.T
+            )
+            diff_xyz = cur_xyz - prev_xyz
+            time_diff_xyz = np.linalg.norm(diff_xyz) / xyz_max_speed
+            time_diff_rpy = np.abs(diff_degrees) / rpy_max_speed
+
+            num_steps = (
+                max(
+                    int(time_diff_xyz / control_cycle),
+                    int(time_diff_rpy / control_cycle),
+                )
+                + 2
+            )
+            diff_xyz_per_step = diff_xyz / num_steps
+            diff_degrees_per_step = diff_degrees / num_steps
+            for t in range(num_steps):
+                targ_xyz = prev_xyz + diff_xyz_per_step * (t + 1)
+                targ_rpy = rotation_matrix_to_rpy_radians(
+                    rotation_around_axis(diff_axis, diff_degrees_per_step * (t + 1))[
+                        0:3, 0:3
+                    ]
+                    @ prev_rot,
+                    yaw_radians_on_singular=0.0,
+                )
+                q = inverse_kienmatics(
+                    dh_params,
+                    targ_xyz,
+                    targ_rpy,
+                    q_init,
+                    ee_transform,
+                    update_step,
+                    max_iter,
+                    xyz_convergence_tolerance,
+                    rpy_convergence_tolerance,
+                    epsilon,
+                )
+                if q is None:
+                    print("Failed to plan path using inverse kinematics")
+                    return None
+                final_q_path.append(q)
+                q_init = q
+            prev_xyz = cur_xyz
+            prev_rot = cur_rot
 
     return final_q_path

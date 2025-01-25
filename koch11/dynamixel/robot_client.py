@@ -22,7 +22,7 @@ class DynamixelRobotClient(RobotClient):
         dh_params: List[DhParam],
         q_range: dict,
         dq_range: dict,
-        q_offsets=np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi]),
+        q_offsets=np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2]),
         port_name="/dev/ttyACM0",
         baud_rate=2000000,
         retry_num=30,
@@ -149,7 +149,7 @@ class DynamixelRobotClient(RobotClient):
         rpy: np.ndarray | None,
         ee_transform: np.ndarray = np.identity(4),
         xyz_max_speed=0.1,
-        rpy_max_speed=1.55,
+        rpy_max_speed=4.55,
         convergence_timeout_seconds=4.0,
         xyz_convergence_tol=0.001,
         rpy_convergence_tol=0.001,
@@ -167,6 +167,9 @@ class DynamixelRobotClient(RobotClient):
             xyz_convergence_tolerance=xyz_convergence_tol,
             rpy_convergence_tolerance=rpy_convergence_tol,
         )
+        if q_path is None:
+            raise RuntimeError("Failed to obtain inverse kinematics solution")
+
         self.move_q_path(q_path, 30.0, convergence_timeout_seconds, atol)
 
     def move_q_path(
