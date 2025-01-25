@@ -15,13 +15,6 @@ from koch11.core.kinematics.math_utils import transform_to_xyz_rpy
 from koch11.dynamixel.dynamixel_client import DynamixelXLSeriesClient, ControlTable
 
 
-def plan_q_trajectory(q, target_q, max_speed: float, control_cycle: float):
-    max_diff_q = np.max(np.abs(target_q - q))
-    num_steps = int(max_diff_q / (control_cycle * max_speed)) + 2
-    q_traj = np.linspace(q, target_q, num_steps)
-    return q_traj
-
-
 class DynamixelRobotClient(RobotClient):
     def __init__(
         self,
