@@ -6,7 +6,7 @@ client = make_client()
 client.make_control_enable()
 
 p = client.get_present_p()
-dpos = np.array([0.08, 0.0, -0.08, 0.0, 2 * np.pi / 3, 0.0])
+dpos = np.array([0.08, 0.0, -0.08, 0.0, 0.0, 0.0])
 print(p)
 
 max_xyz_speed = 0.1
