@@ -23,8 +23,14 @@ dq_range = {
     "max": np.array([2 * np.pi, 2 * np.pi, 3 * np.pi, 3 * np.pi, 3 * np.pi]),
 }
 
+q_offsets_follower = np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2])
+q_rot_direction_follower = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
 
-def make_client(
+q_offsets_leader = np.array([-np.pi, 0.0, -np.pi / 2, -np.pi / 2, -np.pi / 2])
+q_rot_direction_leader = np.array([1.0, 1.0, 1.0, -1.0, 1.0])
+
+
+def make_follower_client(
     port_name: str = "/dev/ttyACM0", baud_rate=2000000
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
@@ -35,4 +41,22 @@ def make_client(
         port_name=port_name,
         baud_rate=baud_rate,
         retry_num=30,
+        q_offsets=q_offsets_follower,
+        q_rot_direction=q_rot_direction_follower,
+    )
+
+
+def make_leader_client(
+    port_name: str = "/dev/ttyACM1", baud_rate=2000000
+) -> DynamixelRobotClient:
+    return DynamixelRobotClient(
+        [1, 2, 3, 4, 5],
+        dh_params,
+        q_range,
+        dq_range,
+        port_name=port_name,
+        baud_rate=baud_rate,
+        retry_num=30,
+        q_offsets=q_offsets_leader,
+        q_rot_direction=q_rot_direction_leader,
     )
