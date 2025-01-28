@@ -1,6 +1,6 @@
-from koch11.dynamixel.koch11 import make_client
+from koch11.dynamixel.koch11 import make_follower_client
 
-client = make_client()
+client = make_follower_client()
 
 status = {
     "joint position": client.get_present_q(),

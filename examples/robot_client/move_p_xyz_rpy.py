@@ -1,8 +1,8 @@
 import numpy as np
 
-from koch11.dynamixel.koch11 import make_client
+from koch11.dynamixel.koch11 import make_follower_client
 
-client = make_client()
+client = make_follower_client()
 client.make_control_enable()
 
 p = client.get_present_p()

@@ -1,10 +1,10 @@
 import numpy as np
 import time
 
-from koch11.dynamixel.koch11 import make_client
+from koch11.dynamixel.koch11 import make_follower_client
 from koch11.core.robot_client import OperatingMode
 
-client = make_client()
+client = make_follower_client()
 client.make_control_disable()
 client.set_operation_mode(OperatingMode.VelocityControl)
 client.make_control_enable()
