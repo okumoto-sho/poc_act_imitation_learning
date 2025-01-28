@@ -18,13 +18,15 @@ class DynamixelRobotClient(RobotClient):
         port_name="/dev/ttyACM0",
         baud_rate=2000000,
         retry_num=30,
+        control_cycle=0.002,
     ):
-        super().__init__(dh_params, q_range, dq_range, 0.002)
+        super().__init__(dh_params, q_range, dq_range, control_cycle)
         self.motor_ids = motor_ids
         self.client = DynamixelXLSeriesClient(port_name, baud_rate)
         self.retry_num = retry_num
         self.q_offsets = q_offsets
         self.q_rot_direction = q_rot_direction
+        self.control_cycle = control_cycle
 
     def pwm_to_q_radians(self, data: np.ndarray | List[int]):
         q = np.array(data) * 0.087891 * (2 * np.pi / 360.0) + self.q_offsets
