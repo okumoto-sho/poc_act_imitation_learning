@@ -40,13 +40,11 @@ class RobotClient(ABC):
         dh_params: List[DhParam],
         q_range: dict,
         dq_range: dict,
-        q_offsets: np.ndarray,
         control_cycle: float,
     ):
         self.dh_params = dh_params
         self.q_range = q_range
         self.dq_range = dq_range
-        self.q_offsets = q_offsets
         self.control_cycle = control_cycle
 
     def _check_data_length(self, data: np.ndarray | List[Any]):
