@@ -14,28 +14,34 @@ class DynamixelRobotClient(RobotClient):
         q_range: dict,
         dq_range: dict,
         q_offsets=np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2]),
+        q_rot_direction=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
         port_name="/dev/ttyACM0",
         baud_rate=2000000,
         retry_num=30,
     ):
-        super().__init__(dh_params, q_range, dq_range, q_offsets, 0.002)
+        super().__init__(dh_params, q_range, dq_range, 0.002)
         self.motor_ids = motor_ids
         self.client = DynamixelXLSeriesClient(port_name, baud_rate)
         self.retry_num = retry_num
+        self.q_offsets = q_offsets
+        self.q_rot_direction = q_rot_direction
 
     def pwm_to_q_radians(self, data: np.ndarray | List[int]):
-        return np.array(data) * 0.087891 * (2 * np.pi / 360.0) + self.q_offsets
+        q = np.array(data) * 0.087891 * (2 * np.pi / 360.0) + self.q_offsets
+        return q * self.q_rot_direction
 
     def q_radians_to_pwm(self, data: np.ndarray):
-        q_radians = (data - self.q_offsets) * (360.0 / (2 * np.pi))
+        q_radians = (
+            self.q_rot_direction * (data - self.q_offsets) * (360.0 / (2 * np.pi))
+        )
         return list((q_radians * (1 / 0.087891)).astype(np.int32))
 
     def pwm_to_dq_radians(self, data: np.ndarray | List[int]):
         rev_per_min = np.array(data) * 0.229
-        return 2 * np.pi * rev_per_min / 60.0
+        return self.q_rot_direction * 2 * np.pi * rev_per_min / 60.0
 
     def dq_radians_to_pwm(self, data: np.ndarray):
-        rev_per_min = 60.0 * data / (2 * np.pi)
+        rev_per_min = self.q_rot_direction * 60.0 * data / (2 * np.pi)
         rev_per_min_pwm = (rev_per_min / 0.229).astype(np.int32)
         return rev_per_min_pwm
 
