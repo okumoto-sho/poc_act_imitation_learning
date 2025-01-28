@@ -35,6 +35,7 @@ def make_follower_client(
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
         [1, 2, 3, 4, 5],
+        [0, 1, 2, 3, 4],
         dh_params,
         q_range,
         dq_range,
@@ -51,6 +52,7 @@ def make_leader_client(
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
         [1, 2, 3, 4, 5],
+        [0, 1, 2, 3, 4],
         dh_params,
         q_range,
         dq_range,

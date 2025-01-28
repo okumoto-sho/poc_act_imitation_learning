@@ -15,7 +15,7 @@ from koch11.core.kinematics.math_utils import (
     rotation_matrix_to_axis_and_angle,
     transform_to_xyz_rpy,
 )
-from typing import List, Any
+from typing import List, Any, Dict
 from enum import IntEnum
 from abc import ABC, abstractmethod
 
@@ -38,10 +38,32 @@ class RobotClient(ABC):
     def __init__(
         self,
         dh_params: List[DhParam],
-        q_range: dict,
-        dq_range: dict,
+        link_q_indices: List[int],
+        q_range: Dict[str, np.ndarray],
+        dq_range: Dict[str, np.ndarray],
         control_cycle: float,
     ):
+        if len(dh_params) != len(link_q_indices):
+            raise ValueError("Length of dh_params, link_q_indices should be the same")
+
+        if not (
+            len(q_range["min"])
+            == len(q_range["max"])
+            == len(dq_range["min"])
+            == len(dq_range["max"])
+        ):
+            raise ValueError("Length of q_range, dq_range should be the same")
+
+        self.link_q_indices = link_q_indices
+        self.link_q_range = {
+            "min": q_range["min"][link_q_indices],
+            "max": q_range["max"][link_q_indices],
+        }
+        self.link_dq_range = {
+            "min": dq_range["min"][link_q_indices],
+            "max": dq_range["max"][link_q_indices],
+        }
+
         self.dh_params = dh_params
         self.q_range = q_range
         self.dq_range = dq_range

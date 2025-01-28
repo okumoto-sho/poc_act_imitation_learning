@@ -10,17 +10,23 @@ class DynamixelRobotClient(RobotClient):
     def __init__(
         self,
         motor_ids: List[int],
+        link_q_indices: List[int],
         dh_params: List[DhParam],
         q_range: dict,
         dq_range: dict,
-        q_offsets=np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2]),
-        q_rot_direction=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+        q_offsets,
+        q_rot_direction,
         port_name="/dev/ttyACM0",
         baud_rate=2000000,
         retry_num=30,
         control_cycle=0.002,
     ):
-        super().__init__(dh_params, q_range, dq_range, control_cycle)
+        if not (len(motor_ids) == len(q_offsets) == len(q_rot_direction)):
+            raise ValueError(
+                "The number of motor_ids, q_offsets, and q_rot_direction must be the same."
+            )
+
+        super().__init__(dh_params, link_q_indices, q_range, dq_range, control_cycle)
         self.motor_ids = motor_ids
         self.client = DynamixelXLSeriesClient(port_name, baud_rate)
         self.retry_num = retry_num
