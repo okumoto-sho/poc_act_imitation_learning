@@ -70,7 +70,7 @@ class RobotClient(ABC):
         self.control_cycle = control_cycle
 
     def _check_data_length(self, data: np.ndarray | List[Any]):
-        if len(data) != len(self.motor_ids):
+        if len(data) != len(self.q_range["min"]):
             raise ValueError(
                 f"Different length data is given. Expected length is {len(self.motor_ids)}"
             )

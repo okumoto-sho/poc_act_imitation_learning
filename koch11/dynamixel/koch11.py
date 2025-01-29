@@ -13,28 +13,41 @@ dh_params = [
 
 q_range = {
     "min": np.array(
-        [-np.pi / 2, -np.pi / 2 - 0.1, -np.pi / 2 - 0.1, -7 * np.pi / 10, -np.pi]
+        [
+            -np.pi / 2,
+            -np.pi / 2 - 0.1,
+            -np.pi / 2 - 0.1,
+            -7 * np.pi / 10,
+            -np.pi,
+            -np.pi / 100,
+        ]
     ),
-    "max": np.array([np.pi / 2, np.pi / 2 + 0.1, np.pi, 7 * np.pi / 10, np.pi]),
+    "max": np.array(
+        [np.pi / 2, np.pi / 2 + 0.1, np.pi, 7 * np.pi / 10, np.pi, np.pi / 2]
+    ),
 }
 
 dq_range = {
-    "min": np.array([-2 * np.pi, -2 * np.pi, -3 * np.pi, -3 * np.pi, -3 * np.pi]),
-    "max": np.array([2 * np.pi, 2 * np.pi, 3 * np.pi, 3 * np.pi, 3 * np.pi]),
+    "min": np.array(
+        [-2 * np.pi, -2 * np.pi, -3 * np.pi, -3 * np.pi, -3 * np.pi, -3 * np.pi]
+    ),
+    "max": np.array([2 * np.pi, 2 * np.pi, 3 * np.pi, 3 * np.pi, 3 * np.pi, 3 * np.pi]),
 }
 
-q_offsets_follower = np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2])
-q_rot_direction_follower = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+q_offsets_follower = np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2, -np.pi])
+q_rot_direction_follower = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
-q_offsets_leader = np.array([-np.pi, 0.0, -np.pi / 2, -np.pi / 2, -np.pi / 2])
-q_rot_direction_leader = np.array([1.0, 1.0, 1.0, -1.0, 1.0])
+q_offsets_leader = np.array(
+    [-np.pi, 0.0, -np.pi / 2, -np.pi / 2, -np.pi / 2, -np.pi / 2]
+)
+q_rot_direction_leader = np.array([1.0, 1.0, 1.0, -1.0, 1.0, 1.0])
 
 
 def make_follower_client(
     port_name: str = "/dev/ttyACM0", baud_rate=2000000
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
-        [1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5, 6],
         [0, 1, 2, 3, 4],
         dh_params,
         q_range,
@@ -51,7 +64,7 @@ def make_leader_client(
     port_name: str = "/dev/ttyACM1", baud_rate=2000000
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
-        [1, 2, 3, 4, 5],
+        [1, 2, 3, 4, 5, 6],
         [0, 1, 2, 3, 4],
         dh_params,
         q_range,

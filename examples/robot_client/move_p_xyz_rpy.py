@@ -16,4 +16,4 @@ for _ in range(100):
     max_q_speed += 0.05
     cur_p = p + dpos
     client.move_p(cur_p[0:3], cur_p[3:6], xyz_max_speed=max_xyz_speed, atol=0.0001)
-    client.move_q(np.array([0, 0, 0, 0, 0]), atol=0.0001, speed=max_q_speed)
+    client.move_q(np.array([0, 0, 0, 0, 0, 0]), atol=0.0001, speed=max_q_speed)

@@ -258,7 +258,7 @@ def plan_ik_q_trajectory(
     rpy_max_speed=4.55,
     epsilon=1e-5,
 ) -> List[np.ndarray]:
-    fk = forward_kinematics(dh_params, q_init, ee_transform)
+    fk = forward_kinematics(dh_params, q_init[link_q_indices], ee_transform)
     init_xyz, init_rot = fk[0:3, 3], fk[0:3, 0:3]
     final_q_path = []
 
