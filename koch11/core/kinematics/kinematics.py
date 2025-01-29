@@ -181,6 +181,7 @@ def _inverse_kinematics_xyz_rpy(
 
 def inverse_kienmatics(
     dh_params: List[DhParam],
+    link_q_indices: List[int],
     xyz: np.ndarray | None,
     rpy: np.ndarray | None,
     init_q_radians: np.ndarray,
@@ -199,7 +200,7 @@ def inverse_kienmatics(
         q, diff_rpy = _inverse_kinematics_rpy(
             dh_params,
             rpy,
-            init_q_radians,
+            init_q_radians[link_q_indices],
             ee_transform,
             update_step,
             max_iter,
@@ -211,7 +212,7 @@ def inverse_kienmatics(
         q, diff_xyz = _inverse_kinematics_xyz(
             dh_params,
             xyz,
-            init_q_radians,
+            init_q_radians[link_q_indices],
             ee_transform,
             update_step,
             max_iter,
@@ -223,7 +224,7 @@ def inverse_kienmatics(
             dh_params,
             xyz,
             rpy,
-            init_q_radians,
+            init_q_radians[link_q_indices],
             ee_transform,
             update_step,
             max_iter,
@@ -236,11 +237,14 @@ def inverse_kienmatics(
         print("Inverse kinematics did not converge")
         return None
 
-    return q
+    ret_q = init_q_radians.copy()
+    ret_q[link_q_indices] = q
+    return ret_q
 
 
 def plan_ik_q_trajectory(
     dh_params: List[DhParam],
+    link_q_indices: List[int],
     xyz_path: List[np.ndarray] | None,
     rpy_path: List[np.ndarray] | None,
     q_init: np.ndarray,
@@ -282,6 +286,7 @@ def plan_ik_q_trajectory(
                 )
                 q = inverse_kienmatics(
                     dh_params,
+                    link_q_indices,
                     None,
                     targ_rpy,
                     q_init,
@@ -310,6 +315,7 @@ def plan_ik_q_trajectory(
             for t in range(num_steps_rpy):
                 q = inverse_kienmatics(
                     dh_params,
+                    link_q_indices,
                     prev_xyz + diff_xyz * (t + 1),
                     None,
                     q_init,
@@ -363,6 +369,7 @@ def plan_ik_q_trajectory(
                 )
                 q = inverse_kienmatics(
                     dh_params,
+                    link_q_indices,
                     targ_xyz,
                     targ_rpy,
                     q_init,
