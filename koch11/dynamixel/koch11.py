@@ -19,7 +19,7 @@ q_range = {
             -np.pi / 2 - 0.1,
             -7 * np.pi / 10,
             -np.pi,
-            -np.pi / 100,
+            -np.pi / 6,
         ]
     ),
     "max": np.array(
@@ -37,9 +37,7 @@ dq_range = {
 q_offsets_follower = np.array([-np.pi, -np.pi, -np.pi, -np.pi, -np.pi / 2, -np.pi])
 q_rot_direction_follower = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
-q_offsets_leader = np.array(
-    [-np.pi, 0.0, -np.pi / 2, -np.pi / 2, -np.pi / 2, -np.pi / 2]
-)
+q_offsets_leader = np.array([-np.pi, 0.0, -np.pi / 2, -np.pi / 2, -np.pi / 2, -np.pi])
 q_rot_direction_leader = np.array([1.0, 1.0, 1.0, -1.0, 1.0, 1.0])
 
 

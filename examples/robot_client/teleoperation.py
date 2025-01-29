@@ -5,7 +5,7 @@ from koch11.dynamixel.koch11 import make_leader_client, make_follower_client
 
 follower = make_follower_client()
 follower.make_control_enable()
-follower.move_q(np.array([0, 0, 0, 0, 0]))
+follower.move_q(np.array([0, 0, 0, 0, 0, 0]))
 
 leader = make_leader_client()
 
