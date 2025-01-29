@@ -10,9 +10,9 @@ dpos = np.array([0.15, 0.05, -0.10])
 print(p)
 
 max_xyz_speed = 0.1
-max_q_speed = 0.5
+max_q_speed = 0.1
 for _ in range(100):
-    max_xyz_speed += 0.03
+    # max_xyz_speed += 0.03
     max_q_speed += 0.05
     client.move_p(p[0:3] + dpos, None, xyz_max_speed=max_xyz_speed, atol=0.0001)
     print(client.get_present_p()[0:3] - p[0:3])

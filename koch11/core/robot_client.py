@@ -144,7 +144,6 @@ class RobotClient(ABC):
         q = self.inverse_kinematics(
             xyz,
             rpy,
-            self.get_present_q(),
             ee_transform,
             xyz_convergence_tol,
             rpy_convergence_tol,
@@ -167,6 +166,7 @@ class RobotClient(ABC):
     ):
         q_path = plan_ik_q_trajectory(
             self.dh_params,
+            self.link_q_indices,
             [xyz] if xyz is not None else None,
             [rpy] if rpy is not None else None,
             self.get_present_q(),
@@ -220,6 +220,7 @@ class RobotClient(ABC):
     ):
         q_path = plan_ik_q_trajectory(
             self.dh_params,
+            self.link_q_indices,
             xyz,
             rpy,
             self.get_present_q(),
@@ -246,6 +247,7 @@ class RobotClient(ABC):
     ):
         q = inverse_kienmatics(
             self.dh_params,
+            self.link_q_indices,
             xyz,
             rpy,
             init_q,
@@ -269,7 +271,7 @@ class RobotClient(ABC):
         self, q: np.ndarray, ee_transform: np.ndarray = np.identity(4)
     ):
         self._check_data_length(q)
-        return forward_kinematics(self.dh_params, q, ee_transform)
+        return forward_kinematics(self.dh_params, q[self.link_q_indices], ee_transform)
 
     def forward_kinematics_all_links(
         self,
@@ -279,11 +281,13 @@ class RobotClient(ABC):
     ):
         self._check_data_length(q)
         return forward_kinematics_all_links(
-            self.dh_params, q, ee_transform, convergence_tol
+            self.dh_params, q[self.link_q_indices], ee_transform, convergence_tol
         )
 
     def get_jacobian(self, q: np.ndarray):
-        return calculate_basic_jacobian_xyz_omega(self.dh_params, q)
+        return calculate_basic_jacobian_xyz_omega(
+            self.dh_params, q[self.link_q_indices]
+        )
 
     def servo_q(self, q: np.ndarray):
         start = time.time()
