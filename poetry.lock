@@ -472,6 +472,17 @@ files = [
 pyserial = "*"
 
 [[package]]
+name = "einops"
+version = "0.8.0"
+description = "A new flavour of deep learning operations"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "einops-0.8.0-py3-none-any.whl", hash = "sha256:9572fb63046264a862693b0a87088af3bdc8c068fde03de63453cbbde245465f"},
+    {file = "einops-0.8.0.tar.gz", hash = "sha256:63486517fed345712a8385c100cb279108d9d47e6ae59099b07657e983deae85"},
+]
+
+[[package]]
 name = "etils"
 version = "1.11.0"
 description = "Collection of common python utils"
@@ -3035,4 +3046,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "f91482c2d359d7c6d1754d314b9d78743898eb9e60ddd3369a7a5efa32d9b629"
+content-hash = "5840a0ec7c7615867abc4562709f89fbda1cbb2e2b7fb17bad95cf6a034d862d"
