@@ -15,6 +15,7 @@ genesis-world = "^0.2.1"
 torch = "^2.5.1"
 flake8 = "^7.1.1"
 autopep8 = "^2.3.2"
+opencv-python = "^4.11.0.86"
 
 
 [build-system]
