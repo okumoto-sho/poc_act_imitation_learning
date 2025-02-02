@@ -60,7 +60,7 @@ def execute_single_teleoperation_step(
             time.sleep(control_cycle - (end - start))
         print(f"Coillecting data. Step: {step}, FPS: {1 / (end - start)}")
 
-    with h5py.File(f"{args.dataset_dir}/{args.task_name}_{episode_id}.h5", "w") as f:
+    with h5py.File(f"{dataset_dir}/{task_name}_{episode_id}.h5", "w") as f:
         obs = f.create_group("observations")
         images = obs.create_group("images")
         for cam in teleoperation_config["camera_configs"]:
