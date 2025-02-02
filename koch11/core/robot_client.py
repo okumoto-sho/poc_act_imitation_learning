@@ -89,6 +89,12 @@ class RobotClient(ABC):
         if not self._contained_in_range_dq(dq):
             raise ValueError("dq is out of range")
 
+    def _check_control_enabled(self):
+        if not self.is_control_enabled():
+            raise RuntimeError(
+                "Control is not enabled. Enable control first by calling `make_control_enable`"
+            )
+
     def _try_make_q_contained_in_range_q(self, q: np.ndarray):
         def _try_contained(q_i: float, q_min: float, q_max: float):
             print(q_i)
@@ -361,7 +367,7 @@ class RobotClient(ABC):
     def get_present_dp(self) -> None:
         ret = self.get_present_dq()
         J = self.get_jacobian(self.get_present_q())
-        return J @ ret
+        return J @ ret[self.link_q_indices]
 
     def get_present_voltage(self):
         self._get_present_voltage_impl()
@@ -407,6 +413,14 @@ class RobotClient(ABC):
 
     def get_present_tempratures(self):
         return self._get_present_tempratures_impl()
+
+    def reboot(self):
+        self.make_control_disable()
+        self._reboot_impl()
+
+    @abstractmethod
+    def _reboot_impl(self):
+        pass
 
     @abstractmethod
     def _is_control_enabled_impl(self):

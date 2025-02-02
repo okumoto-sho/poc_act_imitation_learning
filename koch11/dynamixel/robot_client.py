@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 from typing import List
 from koch11.core.robot_client import RobotClient, OperatingMode
@@ -59,7 +60,7 @@ class DynamixelRobotClient(RobotClient):
         )
         return all([x == 1 for x in ret])
 
-    def _make_control_enable_impl(self):
+    def _make_control_enable_impl(self, timeout_seconds=1.0):
         self.client.sync_write(
             self.motor_ids,
             ControlTable.TorqueEnable,
@@ -67,13 +68,30 @@ class DynamixelRobotClient(RobotClient):
             self.retry_num,
         )
 
-    def _make_control_disable_impl(self):
+        start = end = time.time()
+        while not self._is_control_enabled_impl() and (end - start) < timeout_seconds:
+            time.sleep(0.01)
+            end = time.time()
+
+        if not self._is_control_enabled_impl():
+            raise TimeoutError("Failed to enable control.")
+
+    def _make_control_disable_impl(self, timeout_seconds=1.0):
         self.client.sync_write(
             self.motor_ids,
             ControlTable.TorqueEnable,
             [0] * len(self.motor_ids),
             self.retry_num,
         )
+
+        start = end = time.time()
+
+        while self._is_control_enabled_impl() and (end - start) < timeout_seconds:
+            time.sleep(0.01)
+            end = time.time()
+
+        if self._is_control_enabled_impl():
+            raise TimeoutError("Failed to disable control.")
 
     def _servo_q_impl(self, q: np.ndarray):
         q = self.q_radians_to_pwm(q)
@@ -189,3 +207,7 @@ class DynamixelRobotClient(RobotClient):
             self.motor_ids, ControlTable.PresentTemperature, self.retry_num
         )
         return ret
+
+    def _reboot_impl(self):
+        for motor_id in self.motor_ids:
+            self.client.reboot(motor_id)
