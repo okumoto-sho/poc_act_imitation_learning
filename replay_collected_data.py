@@ -20,7 +20,7 @@ def main(args):
 
     if args.move_robot:
         follower = make_follower_client()
-        follower.move_q(teleoperation_config["follower_initail_q"])
+        follower.move_q(dataset_dict["/observations/qpos"][0])
 
     control_cycle: float = teleoperation_config["control_cycle"]
     print("Press 'q' to quit")
