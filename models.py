@@ -4,7 +4,7 @@ import torchvision
 import einops
 
 
-def calculate_sinusoidal_positional_embedding(
+def calculate_sinusoidal_positional_encoding(
     seq_length: int, embed_dim: int, temperature: float = 10000.0
 ):
     position = torch.arange(seq_length).float()
@@ -87,8 +87,8 @@ class ActEncoder(nn.Module):
         self.z_dim = z_dim
         self.encoder = nn.TransformerEncoder(self.encoder_layer, n_enc_layers)
         self.emb_z = nn.Linear(emb_dim, z_dim * 2)
-        self.pos_embed = (
-            calculate_sinusoidal_positional_embedding(action_chunk_size + 2, emb_dim)
+        self.pos_encoding = (
+            calculate_sinusoidal_positional_encoding(action_chunk_size + 2, emb_dim)
             .cuda()
             .detach()
         )
@@ -108,7 +108,7 @@ class ActEncoder(nn.Module):
         concatenated_embeded = torch.cat(
             (cls_token, qpos_embeded, action_embeded), dim=1
         )
-        enc_output = self.encoder(concatenated_embeded + self.pos_embed)
+        enc_output = self.encoder(concatenated_embeded + self.pos_encoding)
         z = self.emb_z(enc_output[:, 0, :])
 
         mu_z = z[:, : self.z_dim]
@@ -152,8 +152,8 @@ class ActDecoder(nn.Module):
         self.action_token = nn.Parameter(torch.randn(1, action_chunk_size, emb_dim))
         self.action_head = nn.Linear(emb_dim, action_dim)
 
-        self.pos_emb = (
-            calculate_sinusoidal_positional_embedding(
+        self.pos_encoding = (
+            calculate_sinusoidal_positional_encoding(
                 self.MAX_IMAGE_FEAT_SEQ_LENGTH + 2, emb_dim
             )
             .cuda()
@@ -175,7 +175,7 @@ class ActDecoder(nn.Module):
         action_tokens = self.action_token.repeat(concated_embeded.size(0), 1, 1)
 
         output = self.transformer(
-            concated_embeded + self.pos_emb[: concated_embeded.shape[1], :],
+            concated_embeded + self.pos_encoding[: concated_embeded.shape[1], :],
             action_tokens,
         )
         output = self.action_head(output[:, :, :])
