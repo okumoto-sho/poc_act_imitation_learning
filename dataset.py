@@ -6,6 +6,18 @@ import numpy as np
 from typing import List
 
 
+def read_h5_dataset(dataset_path: str, camera_device_names: List[str]):
+    dataset_dict = {}
+    with h5py.File(dataset_path, "r") as f:
+        dataset_dict["qpos"] = f["/observations/qpos"][:]
+        for device_name in camera_device_names:
+            dataset_dict[f"images/{device_name}"] = f[
+                f"/observations/images/{device_name}"
+            ][:]
+        dataset_dict["action"] = f["/action"][:]
+    return dataset_dict
+
+
 class EpisodicDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -13,12 +25,16 @@ class EpisodicDataset(torch.utils.data.Dataset):
         task_name: str,
         num_episods: int,
         camera_names: List[str],
+        action_chunk_size: int = 100,
+        random_sampling: bool = True,
     ):
         super(EpisodicDataset).__init__()
         self.dataset_dir = dataset_dir
+        self.action_chunk_size = action_chunk_size
         self.task_name = task_name
         self.num_episodes = num_episods
         self.camera_names = camera_names
+        self.random_sampling = random_sampling
 
     def __len__(self):
         return self.num_episodes
@@ -32,23 +48,20 @@ class EpisodicDataset(torch.utils.data.Dataset):
         episode_path = os.path.join(self.dataset_dir, f"{self.task_name}_{index}.h5")
         with h5py.File(episode_path, "r") as f:
             episode_len = len(f["/observations/qpos"])
-            action_shape = f["/action"].shape
-            start_ts = np.random.choice(episode_len)
+            if self.random_sampling:
+                start_ts = np.random.choice(episode_len - self.action_chunk_size)
+            else:
+                start_ts = 0
 
             qpos = f["/observations/qpos"][start_ts]
             images = []
             for camera_name in self.camera_names:
                 images.append(f[f"/observations/images/{camera_name}"][start_ts])
-            action = f["/action"][start_ts:]
-
-        padded_action = np.zeros(action_shape, dtype=np.float32)
-        padded_action[: len(action)] = action
-        is_pad = np.zeros(episode_len)
-        is_pad[len(action) :] = 1
+            action = f["/action"][start_ts : self.action_chunk_size + start_ts]
 
         qpos = torch.from_numpy(qpos).float()
-        images = np.stack(images, axis=0)
+        images = np.stack(images, axis=0) / 255.0
         images = torch.from_numpy(images).float()
-        action_data = torch.from_numpy(padded_action).float()
+        action_data = torch.from_numpy(action).float()
 
-        return qpos, images, action_data, is_pad
+        return qpos, images, action_data
