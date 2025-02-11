@@ -6,6 +6,7 @@ import numpy as np
 
 from koch11.dynamixel.koch11 import make_leader_client, make_follower_client
 from teleoperation_config import teleoperation_config
+from koch11.camera import Camera
 
 
 def execute_single_teleoperation_step(
@@ -19,10 +20,8 @@ def execute_single_teleoperation_step(
         start = time.time()
         command_q = leader.get_present_q()
         follower.servo_q(command_q)
-        for cap in cameras:
-            ret, frame = cap.read()
-            frame = cv.flip(frame, 0)
-            frame = cv.flip(frame, 1)
+        for camera in cameras:
+            frame = camera.read(flip=True)
             cv.imshow("Frame", frame)
         end = time.time()
         if (end - start) < control_cycle:
@@ -48,10 +47,8 @@ def execute_single_teleoperation_step(
 
         data_dict["/observations/qpos"][step, :] = qpos
         data_dict["/action"][step, :] = command_q
-        for i, cap in enumerate(cameras):
-            ret, frame = cap.read()
-            frame = cv.flip(frame, 0)
-            frame = cv.flip(frame, 1)
+        for i, camera in enumerate(cameras):
+            frame = camera.read(flip=True)
             data_dict[f"/observations/images/{i}"][step, :] = frame
 
         follower.servo_q(command_q)
@@ -60,6 +57,7 @@ def execute_single_teleoperation_step(
             time.sleep(control_cycle - (end - start))
         print(f"Coillecting data. Step: {step}, FPS: {1 / (end - start)}")
 
+    #  save the collected data
     with h5py.File(f"{dataset_dir}/{task_name}_{episode_id}.h5", "w") as f:
         obs = f.create_group("observations")
         images = obs.create_group("images")
@@ -86,12 +84,15 @@ def main(args):
     # setting the camera settings
     cameras = []
     for camera_config in teleoperation_config["camera_configs"]:
-        cap = cv.VideoCapture(camera_config["device_id"])
-        cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc(*camera_config["fourcc"]))
-        cap.set(cv.CAP_PROP_FPS, camera_config["fps"])
-        cap.set(cv.CAP_PROP_FRAME_WIDTH, camera_config["width"])
-        cap.set(cv.CAP_PROP_FRAME_HEIGHT, camera_config["height"])
-        cameras.append(cap)
+        cameras.append(
+            Camera(
+                camera_config["device_id"],
+                camera_config["fps"],
+                camera_config["width"],
+                camera_config["height"],
+                camera_config["fourcc"],
+            )
+        )
 
     # Repeat the teleoperation and data collection for the specified number of episodes
     for episode_id in range(
@@ -105,7 +106,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--initial_episode_id", type=int, default=0)
-    parser.add_argument("--dataset_dir", type=str, default="dataset")
+    parser.add_argument("--dataset_dir", type=str, default="train_dataset")
     parser.add_argument("--task_name", type=str, default="teleoperation")
     parser.add_argument("--num_episodes", type=int, default=50)
     args = parser.parse_args()
