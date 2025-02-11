@@ -26,6 +26,6 @@ teleoperation_config: dict = {
     "follower_initail_q": np.array([0, 0, 0, 0, 0, 0]),
 }
 
-camera_names = [
+camera_device_names = [
     config["device_name"] for config in teleoperation_config["camera_configs"]
 ]

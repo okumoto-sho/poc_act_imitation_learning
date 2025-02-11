@@ -1,38 +1,33 @@
 import argparse
 import cv2 as cv
-import h5py
 import time
 
 from koch11.dynamixel.koch11 import make_follower_client
-from teleoperation_config import teleoperation_config
+from teleoperation_config import teleoperation_config, camera_device_names
+from dataset import read_h5_dataset
 
 
 def main(args):
     cameras_config = teleoperation_config["camera_configs"]
-    dataset_dict = {}
-    with h5py.File(args.dataset_path, "r") as f:
-        dataset_dict["/observations/qpos"] = f["/observations/qpos"][...]
-        dataset_dict["/action"] = f["/action"][...]
-        for cam in cameras_config:
-            dataset_dict[f"/observations/images/{cam['device_id']}"] = f[
-                f"/observations/images/{cam['device_id']}"
-            ][...]
+    dataset_dict = read_h5_dataset(
+        args.dataset_path, camera_device_names=camera_device_names
+    )
 
     if args.move_robot:
         follower = make_follower_client()
-        follower.move_q(dataset_dict["/observations/qpos"][0])
+        follower.move_q(dataset_dict["qpos"][0])
 
     control_cycle: float = teleoperation_config["control_cycle"]
     print("Press 'q' to quit")
-    print(f"Replay the recorded data with length {len(dataset_dict['/action'])}")
-    for i in range(len(dataset_dict["/action"])):
+    print(f"Replay the recorded data with length {len(dataset_dict['action'])}")
+    for i in range(len(dataset_dict["action"])):
         start = time.time()
         for cam in cameras_config:
-            image = dataset_dict[f"/observations/images/{cam['device_id']}"][i]
-            cv.imshow(str(cam["device_id"]), image)
+            image = dataset_dict[f"images/{cam['device_name']}"][i]
+            cv.imshow(str(cam["device_name"]), image)
 
         if args.move_robot:
-            follower.servo_q(dataset_dict["/action"][i])
+            follower.servo_q(dataset_dict["action"][i])
 
         if cv.waitKey(1) == ord("q"):
             break

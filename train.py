@@ -8,7 +8,7 @@ from models import (
     kl_divergence,
 )
 from model_config import model_config
-from teleoperation_config import camera_names
+from teleoperation_config import camera_device_names
 
 
 def main(args):
@@ -16,7 +16,7 @@ def main(args):
         dataset_dir=args.train_dataset_dir,
         task_name=args.task_name,
         num_episods=args.num_episodes_train,
-        camera_names=camera_names,
+        camera_names=camera_device_names,
     )
     train_data_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=8, shuffle=True
@@ -25,7 +25,7 @@ def main(args):
         dataset_dir=args.test_dataset_dir,
         task_name=args.task_name,
         num_episods=args.num_episodes_test,
-        camera_names=camera_names,
+        camera_names=camera_device_names,
     )
     test_data_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=5, shuffle=True
