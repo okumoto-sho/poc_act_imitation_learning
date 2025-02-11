@@ -175,7 +175,10 @@ class ActDecoder(nn.Module):
         action_tokens = self.action_token.repeat(concated_embeded.size(0), 1, 1)
 
         output = self.transformer(
-            concated_embeded + self.pos_encoding[: concated_embeded.shape[1], :],
+            concated_embeded
+            + self.pos_encoding[: concated_embeded.shape[1], :].to(
+                qpos.device, qpos.dtype
+            ),
             action_tokens,
         )
         output = self.action_head(output[:, :, :])
@@ -239,7 +242,9 @@ class ActPolicy(nn.Module):
         qpos: [batch_size, qpos_dim]
         images: [batch_size, 1, n_channels, h, w]
         """
-        z = torch.zeros((qpos.shape[0], self.z_dim)).to(qpos.device)
+        z = torch.zeros((qpos.shape[0], self.z_dim)).to(
+            device=qpos.device, dtype=qpos.dtype
+        )
         images_embeded = []
         for camera_name in images:
             images_embeded.append(self.backbones[camera_name](images[camera_name]))

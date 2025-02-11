@@ -13,18 +13,29 @@ from koch11.camera import Camera
 
 
 def main(args):
-    policy = ActPolicy(
-        camera_device_names,
-        model_config["action_chunk_size"],
-        model_config["action_dim"],
-        model_config["qpos_dim"],
-        model_config["emb_dim"],
-        z_dim=model_config["z_dim"],
-        n_enc_layers=model_config["n_enc_layers"],
-        n_dec_layers=model_config["n_dec_layers"],
-        n_heads=model_config["n_heads"],
-        feedforward_dim=model_config["feedforward_dim"],
-    ).cuda()
+    if args.dtype == "float32":
+        dtype = torch.float32
+    elif args.dtype == "float16":
+        dtype = torch.float16
+    else:
+        raise ValueError(f"Invalid dtype: {args.dtype}")
+
+    policy = (
+        ActPolicy(
+            camera_device_names,
+            model_config["action_chunk_size"],
+            model_config["action_dim"],
+            model_config["qpos_dim"],
+            model_config["emb_dim"],
+            z_dim=model_config["z_dim"],
+            n_enc_layers=model_config["n_enc_layers"],
+            n_dec_layers=model_config["n_dec_layers"],
+            n_heads=model_config["n_heads"],
+            feedforward_dim=model_config["feedforward_dim"],
+        )
+        .cuda()
+        .to(dtype=dtype)
+    )
 
     checkpoint = args.checkpoint
     state_dict = torch.load(checkpoint)
@@ -36,13 +47,7 @@ def main(args):
     cameras_configs = teleoperation_config["camera_configs"]
     cameras = {}
     for camera_config in cameras_configs:
-        cameras[camera_config["device_name"]] = Camera(
-            camera_config["device_id"],
-            camera_config["fps"],
-            camera_config["width"],
-            camera_config["height"],
-            camera_config["fourcc"],
-        )
+        cameras[camera_config["device_name"]] = Camera(**camera_config)
 
     m = model_config["temporal_ensemble_log_discount"]
     action_sum_buffer = np.zeros((episode_len, model_config["action_dim"]))
@@ -56,12 +61,12 @@ def main(args):
 
     # Apply initial action to the robot by move_q. This is neccesary to avoid the sudden movement of the robot.
     qpos = robot.get_present_q()
-    qpos_data = torch.tensor(qpos).float().cuda().unsqueeze(0)
+    qpos_data = torch.tensor(qpos).to(dtype=dtype).cuda().unsqueeze(0)
 
     images = {}
     for camera_name in camera_device_names:
         image = cameras[camera_name].read(flip=True)
-        images_data = torch.tensor(image / 255.0).float().cuda().unsqueeze(0)
+        images_data = torch.tensor(image / 255.0).to(dtype=dtype).cuda().unsqueeze(0)
         images[camera_name] = images_data
 
     actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
@@ -70,16 +75,19 @@ def main(args):
     for i in range(episode_len):
         start = time.time()
         qpos = robot.get_present_q()
-        qpos_data = torch.tensor(qpos).float().cuda().unsqueeze(0)
+        qpos_data = torch.tensor(qpos).to(dtype=dtype).cuda().unsqueeze(0)
 
         images = {}
         for camera_name in camera_device_names:
             image = cameras[camera_name].read(flip=True)
-            images_data = torch.tensor(image / 255.0).float().cuda().unsqueeze(0)
+            images_data = (
+                torch.tensor(image / 255.0).to(dtype=dtype).cuda().unsqueeze(0)
+            )
             images[camera_name] = images_data
             cv.imshow(camera_name, image)
 
-        actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
+        with torch.inference_mode():
+            actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
 
         if cv.waitKey(1) == ord("q"):
             break
@@ -107,5 +115,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str)
     parser.add_argument("--episode_len", type=int, default=10000)
+    parser.add_argument("--dtype", type=str, default="float16")
     args = parser.parse_args()
     main(args)
