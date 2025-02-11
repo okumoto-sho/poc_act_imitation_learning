@@ -27,6 +27,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         camera_names: List[str],
         action_chunk_size: int = 100,
         random_sampling: bool = True,
+        device: str = "cuda:0",
     ):
         super(EpisodicDataset).__init__()
         self.dataset_dir = dataset_dir
@@ -35,6 +36,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         self.num_episodes = num_episods
         self.camera_names = camera_names
         self.random_sampling = random_sampling
+        self.device = device
 
     def __len__(self):
         return self.num_episodes
@@ -54,14 +56,18 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 start_ts = 0
 
             qpos = f["/observations/qpos"][start_ts]
-            images = []
+            images = {}
             for camera_name in self.camera_names:
-                images.append(f[f"/observations/images/{camera_name}"][start_ts])
+                images[camera_name] = (
+                    torch.from_numpy(
+                        f[f"/observations/images/{camera_name}"][start_ts] / 255.0
+                    )
+                    .float()
+                    .to(self.device)
+                )
             action = f["/action"][start_ts : self.action_chunk_size + start_ts]
 
-        qpos = torch.from_numpy(qpos).float()
-        images = np.stack(images, axis=0) / 255.0
-        images = torch.from_numpy(images).float()
-        action_data = torch.from_numpy(action).float()
+        qpos = torch.from_numpy(qpos).float().to(self.device)
+        action_data = torch.from_numpy(action).float().to(self.device)
 
         return qpos, images, action_data

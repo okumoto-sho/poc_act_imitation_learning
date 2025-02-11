@@ -55,7 +55,7 @@ class ActBackbone(nn.Module):
             )
 
     def forward(self, x):
-        x = einops.rearrange(x, "b k h w c -> (b k) c h w")
+        x = einops.rearrange(x, "b h w c -> b c h w")
         for module in self.modules:
             x = module(x)
         x = einops.rearrange(x, "b c h w -> b (h w) c")
@@ -186,6 +186,7 @@ class ActPolicy(nn.Module):
 
     def __init__(
         self,
+        camera_names,
         action_chunk_size,
         action_dim,
         qpos_dim,
@@ -198,7 +199,9 @@ class ActPolicy(nn.Module):
     ):
         super(ActPolicy, self).__init__()
         self.z_dim = z_dim
-        self.backbone = ActBackbone()
+        self.backbones = nn.ModuleDict(
+            {camera_name: ActBackbone() for camera_name in camera_names}
+        )
         self.encoder = ActEncoder(
             action_chunk_size,
             action_dim,
@@ -224,7 +227,10 @@ class ActPolicy(nn.Module):
     def forward(self, qpos, actions, images):
         mu_z, logvar_z = self.encoder(qpos, actions)
         z = sample_detached(mu_z, logvar_z)
-        images_embeded = self.backbone(images)
+        images_embeded = []
+        for camera_name in images:
+            images_embeded.append(self.backbones[camera_name](images[camera_name]))
+        images_embeded = torch.cat(images_embeded, dim=1)
         action_pred = self.decoder(images_embeded, qpos, z)
         return action_pred, mu_z, logvar_z
 
@@ -234,6 +240,9 @@ class ActPolicy(nn.Module):
         images: [batch_size, 1, n_channels, h, w]
         """
         z = torch.zeros((qpos.shape[0], self.z_dim)).to(qpos.device)
-        images_embeded = self.backbone(images)
+        images_embeded = []
+        for camera_name in images:
+            images_embeded.append(self.backbones[camera_name](images[camera_name]))
+        images_embeded = torch.cat(images_embeded, dim=1)
         action_pred = self.decoder(images_embeded, qpos, z)
         return action_pred

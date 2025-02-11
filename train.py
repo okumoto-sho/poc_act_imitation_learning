@@ -19,7 +19,7 @@ def main(args):
         camera_names=camera_device_names,
     )
     train_data_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=8, shuffle=True
+        train_dataset, batch_size=args.batch_size, shuffle=True
     )
     test_dataset = EpisodicDataset(
         dataset_dir=args.test_dataset_dir,
@@ -33,6 +33,7 @@ def main(args):
 
     beta = model_config["beta"]
     act_policy = ActPolicy(
+        camera_device_names,
         model_config["action_chunk_size"],
         model_config["action_dim"],
         model_config["qpos_dim"],
@@ -45,9 +46,7 @@ def main(args):
     ).cuda()
     if args.initial_checkpoint is not None:
         checkpoint = torch.load(args.initial_checkpoint)
-        act_policy.encoder.load_state_dict(checkpoint["encoder_state_dict"])
-        act_policy.decoder.load_state_dict(checkpoint["decoder_state_dict"])
-        act_policy.backbone.load_state_dict(checkpoint["backbone_state_dict"])
+        act_policy.load_state_dict(checkpoint["parameters_state_dict"])
     act_policy.train()
 
     optimizer = torch.optim.AdamW(
@@ -60,14 +59,10 @@ def main(args):
         for data in train_data_loader:
             qpos, images, actions = data
 
-            images_data = images.cuda()
-            actions_data = actions.cuda()
-            qpos_data = qpos.cuda()
-
-            action, mu_z, logvar_z = act_policy(qpos_data, actions_data, images_data)
+            pred_action, mu_z, logvar_z = act_policy(qpos, actions, images)
 
             # loss calculation
-            l2_err = l2_error(action, actions_data)
+            l2_err = l2_error(pred_action, actions)
             kl = kl_divergence(mu_z, logvar_z)
             loss = l2_err + beta * kl
 
@@ -78,13 +73,11 @@ def main(args):
 
             print(f"Loss: {l2_err.item()}")
 
-        if (epoch + 1) % 100 == 0:
+        if (epoch + 1) % 10 == 0:
             torch.save(
                 {
                     "epoch": epoch,
-                    "encoder_state_dict": act_policy.encoder.state_dict(),
-                    "decoder_state_dict": act_policy.decoder.state_dict(),
-                    "backbone_state_dict": act_policy.backbone.state_dict(),
+                    "parameters_state_dict": act_policy.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "loss": loss.item(),
                     "kl": kl.item(),
@@ -102,14 +95,8 @@ def main(args):
                 for data in test_data_loader:
                     qpos, images, actions = data
 
-                    images_data = images.cuda()
-                    actions_data = actions.cuda()
-                    qpos_data = qpos.cuda()
-
-                    action, mu_z, logvar_z = act_policy(
-                        qpos_data, actions_data, images_data
-                    )
-                    l2_errs.append(l2_error(action, actions_data).item())
+                    pred_action, mu_z, logvar_z = act_policy(qpos, actions, images)
+                    l2_errs.append(l2_error(pred_action, actions).item())
                     kls.append(kl_divergence(mu_z, logvar_z).item())
                     losses.append(l2_err + beta * kl)
 

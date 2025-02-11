@@ -5,7 +5,7 @@ import numpy as np
 import cv2 as cv
 
 from koch11.dynamixel.robot_client import DynamixelRobotClient
-from teleoperation_config import teleoperation_config
+from teleoperation_config import teleoperation_config, camera_device_names
 from model_config import model_config
 from models import ActPolicy
 from koch11.dynamixel.koch11 import make_follower_client
@@ -14,6 +14,7 @@ from koch11.camera import Camera
 
 def main(args):
     policy = ActPolicy(
+        camera_device_names,
         model_config["action_chunk_size"],
         model_config["action_dim"],
         model_config["qpos_dim"],
@@ -27,24 +28,20 @@ def main(args):
 
     checkpoint = args.checkpoint
     state_dict = torch.load(checkpoint)
-    policy.encoder.load_state_dict(state_dict["encoder_state_dict"])
-    policy.decoder.load_state_dict(state_dict["decoder_state_dict"])
-    policy.backbone.load_state_dict(state_dict["backbone_state_dict"])
+    policy.load_state_dict(state_dict["parameters_state_dict"])
 
     policy.eval()
 
     episode_len = args.episode_len
-    cameras_config = teleoperation_config["camera_configs"]
-    cameras = []
-    for camera_config in cameras_config:
-        cameras.append(
-            Camera(
-                camera_config["device_id"],
-                camera_config["fps"],
-                camera_config["width"],
-                camera_config["height"],
-                camera_config["fourcc"],
-            )
+    cameras_configs = teleoperation_config["camera_configs"]
+    cameras = {}
+    for camera_config in cameras_configs:
+        cameras[camera_config["device_name"]] = Camera(
+            camera_config["device_id"],
+            camera_config["fps"],
+            camera_config["width"],
+            camera_config["height"],
+            camera_config["fourcc"],
         )
 
     m = model_config["temporal_ensemble_log_discount"]
@@ -60,9 +57,14 @@ def main(args):
     # Apply initial action to the robot by move_q. This is neccesary to avoid the sudden movement of the robot.
     qpos = robot.get_present_q()
     qpos_data = torch.tensor(qpos).float().cuda().unsqueeze(0)
-    image = cameras[0].read(flip=True)
-    images_data = torch.tensor(image / 255.0).float().cuda().unsqueeze(0).unsqueeze(0)
-    actions_pred = policy.inference(qpos_data, images_data)[0].cpu().detach().numpy()
+
+    images = {}
+    for camera_name in camera_device_names:
+        image = cameras[camera_name].read(flip=True)
+        images_data = torch.tensor(image / 255.0).float().cuda().unsqueeze(0)
+        images[camera_name] = images_data
+
+    actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
     robot.move_q(actions_pred[0, :])
 
     for i in range(episode_len):
@@ -70,16 +72,15 @@ def main(args):
         qpos = robot.get_present_q()
         qpos_data = torch.tensor(qpos).float().cuda().unsqueeze(0)
 
-        image = cameras[0].read(flip=True)
-        images_data = (
-            torch.tensor(image / 255.0).float().cuda().unsqueeze(0).unsqueeze(0)
-        )
+        images = {}
+        for camera_name in camera_device_names:
+            image = cameras[camera_name].read(flip=True)
+            images_data = torch.tensor(image / 255.0).float().cuda().unsqueeze(0)
+            images[camera_name] = images_data
+            cv.imshow(camera_name, image)
 
-        actions_pred = (
-            policy.inference(qpos_data, images_data)[0].cpu().detach().numpy()
-        )
+        actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
 
-        cv.imshow("0", image)
         if cv.waitKey(1) == ord("q"):
             break
 
