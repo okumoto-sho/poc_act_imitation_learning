@@ -18,14 +18,16 @@ def execute_single_teleoperation_step(
     print("Press 'q' to start the data collection.")
     while cv.waitKey(1) != ord("q"):
         start = time.time()
-        command_q = leader.get_present_q()
-        follower.servo_q(command_q)
         for camera in cameras:
             frame = camera.read(flip=True)
-            cv.imshow("Frame", frame)
+            cv.imshow(f"Frame {camera.device_name}", frame)
         end = time.time()
+        command_q = leader.get_present_q()
+        follower.servo_q(command_q)
+
         if (end - start) < control_cycle:
             time.sleep(control_cycle - (end - start))
+        print(f"FPS: {1 / (end - start)}")
 
     # prepare the data dictionary
     max_time_steps = teleoperation_config["episode_len_time_steps"]
@@ -34,7 +36,7 @@ def execute_single_teleoperation_step(
         "/action": np.zeros(shape=(max_time_steps, 6)),
     }
     for cam in teleoperation_config["camera_configs"]:
-        data_dict[f"/observations/images/{cam['device_id']}"] = np.zeros(
+        data_dict[f"/observations/images/{cam['device_name']}"] = np.zeros(
             shape=(max_time_steps, cam["height"], cam["width"], 3)
         )
 
@@ -47,9 +49,9 @@ def execute_single_teleoperation_step(
 
         data_dict["/observations/qpos"][step, :] = qpos
         data_dict["/action"][step, :] = command_q
-        for i, camera in enumerate(cameras):
+        for camera in cameras:
             frame = camera.read(flip=True)
-            data_dict[f"/observations/images/{i}"][step, :] = frame
+            data_dict[f"/observations/images/{camera.device_name}"][step, :] = frame
 
         follower.servo_q(command_q)
         end = time.time()
@@ -63,7 +65,7 @@ def execute_single_teleoperation_step(
         images = obs.create_group("images")
         for cam in teleoperation_config["camera_configs"]:
             images.create_dataset(
-                f"{cam['device_id']}",
+                f"{cam['device_name']}",
                 (max_time_steps, cam["height"], cam["width"], 3),
                 dtype="uint8",
             )
@@ -84,15 +86,7 @@ def main(args):
     # setting the camera settings
     cameras = []
     for camera_config in teleoperation_config["camera_configs"]:
-        cameras.append(
-            Camera(
-                camera_config["device_id"],
-                camera_config["fps"],
-                camera_config["width"],
-                camera_config["height"],
-                camera_config["fourcc"],
-            )
-        )
+        cameras.append(Camera(**camera_config))
 
     # Repeat the teleoperation and data collection for the specified number of episodes
     for episode_id in range(

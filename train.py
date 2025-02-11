@@ -73,7 +73,7 @@ def main(args):
 
             print(f"Loss: {l2_err.item()}")
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 50 == 0:
             torch.save(
                 {
                     "epoch": epoch,

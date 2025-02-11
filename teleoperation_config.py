@@ -22,7 +22,7 @@ teleoperation_config: dict = {
     "follower_device": "/dev/ttyACM0",
     "episode_len_time_steps": 500,
     "control_cycle": 0.025,
-    "camera_configs": [camera_config_1],
+    "camera_configs": [camera_config_1, camera_config_2],
     "follower_initail_q": np.array([0, 0, 0, 0, 0, 0]),
 }
 
