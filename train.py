@@ -28,7 +28,7 @@ def main(args):
         camera_names=camera_device_names,
     )
     test_data_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=5, shuffle=True
+        test_dataset, batch_size=args.batch_size, shuffle=True
     )
 
     beta = model_config["beta"]
@@ -132,5 +132,6 @@ if __name__ == "__main__":
     parser.add_argument("--initial_checkpoint", type=str, default=None)
     parser.add_argument("--checkpoints_dir", type=str, default="./checkpoints")
     parser.add_argument("--learning_rate", type=float, default=1e-5)
+    parser.add_argument("--batch_size", type=int, default=8)
     args = parser.parse_args()
     main(args)
