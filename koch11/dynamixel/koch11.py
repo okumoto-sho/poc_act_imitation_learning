@@ -16,14 +16,14 @@ q_range = {
         [
             -2 * np.pi,
             -np.pi / 2 - 0.1,
-            -np.pi / 2 - 0.1,
+            -np.pi / 2 - 0.3,
             -7 * np.pi / 10,
-            -np.pi,
+            -3 * np.pi / 2,
             -np.pi / 6,
         ]
     ),
     "max": np.array(
-        [2 * np.pi, np.pi / 2 + 0.1, np.pi, 7 * np.pi / 10, np.pi, np.pi / 2]
+        [2 * np.pi, np.pi / 2 + 0.3, np.pi, 7 * np.pi / 10, 3 * np.pi / 2, np.pi / 2]
     ),
 }
 
@@ -42,7 +42,7 @@ q_rot_direction_leader = np.array([1.0, 1.0, 1.0, -1.0, 1.0, 1.0])
 
 
 def make_follower_client(
-    port_name: str = "/dev/ttyACM2", baud_rate=1000000
+    port_name: str = "/dev/ttyACM0", baud_rate=1000000
 ) -> DynamixelRobotClient:
     return DynamixelRobotClient(
         [1, 2, 3, 4, 5, 6],
