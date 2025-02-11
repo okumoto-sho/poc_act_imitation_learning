@@ -14,7 +14,6 @@ from koch11.camera import Camera
 
 def main(args):
     policy = ActPolicy(
-        model_config["image_feat_seq_length"],
         model_config["action_chunk_size"],
         model_config["action_dim"],
         model_config["qpos_dim"],

@@ -117,9 +117,11 @@ class ActEncoder(nn.Module):
 
 
 class ActDecoder(nn.Module):
+    # Maximum number of image features
+    MAX_IMAGE_FEAT_SEQ_LENGTH = 3000
+
     def __init__(
         self,
-        image_feat_seq_length,
         action_chunk_size,
         qpos_dim,
         action_dim,
@@ -131,7 +133,6 @@ class ActDecoder(nn.Module):
         feedforward_dim=3200,
     ):
         super(ActDecoder, self).__init__()
-        self.image_feat_seq_length = image_feat_seq_length
         self.action_chunk_size = action_chunk_size
         self.qpos_dim = qpos_dim
         self.action_dim = action_dim
@@ -153,7 +154,7 @@ class ActDecoder(nn.Module):
 
         self.pos_emb = (
             calculate_sinusoidal_positional_embedding(
-                image_feat_seq_length + 2, emb_dim
+                self.MAX_IMAGE_FEAT_SEQ_LENGTH + 2, emb_dim
             )
             .cuda()
             .detach()
@@ -173,7 +174,10 @@ class ActDecoder(nn.Module):
         concated_embeded = torch.cat((z_embeded, qpos_embeded, image_embeded), dim=1)
         action_tokens = self.action_token.repeat(concated_embeded.size(0), 1, 1)
 
-        output = self.transformer(concated_embeded + self.pos_emb, action_tokens)
+        output = self.transformer(
+            concated_embeded + self.pos_emb[: concated_embeded.shape[1], :],
+            action_tokens,
+        )
         output = self.action_head(output[:, :, :])
         return output
 
@@ -182,7 +186,6 @@ class ActPolicy(nn.Module):
 
     def __init__(
         self,
-        image_feat_seq_length,
         action_chunk_size,
         action_dim,
         qpos_dim,
@@ -207,7 +210,6 @@ class ActPolicy(nn.Module):
             z_dim,
         )
         self.decoder = ActDecoder(
-            image_feat_seq_length,
             action_chunk_size,
             qpos_dim,
             action_dim,

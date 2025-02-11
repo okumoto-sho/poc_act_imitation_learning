@@ -33,7 +33,6 @@ def main(args):
 
     beta = model_config["beta"]
     act_policy = ActPolicy(
-        model_config["image_feat_seq_length"],
         model_config["action_chunk_size"],
         model_config["action_dim"],
         model_config["qpos_dim"],
