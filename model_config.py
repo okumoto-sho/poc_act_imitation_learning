@@ -9,5 +9,5 @@ model_config: dict = {
     "n_heads": 8,
     "feedforward_dim": 3200,
     "beta": 10,
-    "temporal_ensemble_log_discount": 0.05,
+    "temporal_ensemble_log_discount": 0.005,
 }
