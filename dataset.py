@@ -27,6 +27,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         camera_names: List[str],
         action_chunk_size: int = 100,
         random_sampling: bool = True,
+        index_offset=0,
         device: str = "cuda:0",
     ):
         super(EpisodicDataset).__init__()
@@ -37,6 +38,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         self.camera_names = camera_names
         self.random_sampling = random_sampling
         self.device = device
+        self.index_offset = index_offset
 
     def __len__(self):
         return self.num_episodes
@@ -47,7 +49,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 f"Index {index} out of range for dataset with {len(self)} episodes"
             )
 
-        episode_path = os.path.join(self.dataset_dir, f"{self.task_name}_{index}.h5")
+        episode_path = os.path.join(
+            self.dataset_dir, f"{self.task_name}_{index + self.index_offset}.h5"
+        )
         with h5py.File(episode_path, "r") as f:
             episode_len = len(f["/observations/qpos"])
             if self.random_sampling:
