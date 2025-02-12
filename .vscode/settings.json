@@ -1,0 +1,13 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
+  "flake8.args": [
+    "--max-line-length=120",
+    "--ignore=E203,W503,W504"
+  ],
+  "black-formatter.interpreter": [
+    "/home/okumoto-sho/.cache/pypoetry/virtualenvs/koch11-uh1SM_lX-py3.10/bin/python"
+  ]
+}
