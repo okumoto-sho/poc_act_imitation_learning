@@ -59,6 +59,18 @@ def main(args):
     )
     robot.make_control_enable()
 
+    # prepare vidoe capture
+    if args.record:
+        out = {}
+        for camera_config in cameras_configs:
+            fourcc = cv.VideoWriter_fourcc(*camera_config["fourcc"])
+            out[camera_config["device_name"]] = cv.VideoWriter(
+                f"{args.record_dir}/{camera_config['device_name']}.avi",
+                fourcc,
+                30,
+                (camera_config["width"], camera_config["height"]),
+            )
+
     # Apply initial action to the robot by move_q. This is neccesary to avoid the sudden movement of the robot.
     qpos = robot.get_present_q()
     qpos_data = torch.tensor(qpos).to(dtype=dtype).cuda().unsqueeze(0)
@@ -85,6 +97,8 @@ def main(args):
             )
             images[camera_name] = images_data
             cv.imshow(camera_name, image)
+            if args.record:
+                out[camera_name].write(image)
 
         with torch.inference_mode():
             actions_pred = policy.inference(qpos_data, images)[0].cpu().detach().numpy()
@@ -110,11 +124,16 @@ def main(args):
             time.sleep(teleoperation_config["control_cycle"] - (end - start))
         print(f"Step: {i}, FPS: {1 / (end - start)}")
 
+    for cap in out.values():
+        cap.release()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str)
     parser.add_argument("--episode_len", type=int, default=10000)
     parser.add_argument("--dtype", type=str, default="float16")
+    parser.add_argument("--record", action="store_true")
+    parser.add_argument("--record_dir", type=str, default="./records")
     args = parser.parse_args()
     main(args)
