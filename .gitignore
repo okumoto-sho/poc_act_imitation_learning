@@ -129,3 +129,6 @@ dmypy.json
 
 # datasets
 *.h5
+
+# records
+records/*
