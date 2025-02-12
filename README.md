@@ -4,9 +4,9 @@
 
 # Example
 - We train the policy that pick the small stapler box and place that in the other black box.
-- The position of the box can be random but within the range of robot motion.
+- The position of the box can be **random but within the range of robot motion**.
 - The following video shows the ACT policy employed to controlling koch-v1-1.
-- The box is placed at the random position in each pick-and-place trials.
+- The box is **placed at the random position in each pick-and-place trials**.
 - It takes about **30 minutes** to complete the 500 epochs training of this policy.
 
 |||
