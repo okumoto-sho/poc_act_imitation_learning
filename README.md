@@ -98,7 +98,7 @@ python evaluate_policy.py --checkpoint <checkpoints_path>
 ```
 
 # Acknowledgement
+I appreciate these refenrence implementations!
 - We used the repository [ACT](https://github.com/Shaka-Labs/ACT) as a reference implementation for teleoperation of koch-v1-1.
 - We adapted model arthictectures and hyper parameters for training and inferecne from [original ACT repository](https://github.com/tonyzhaozh/act).
 - We used the low cost robot arm [koch-v1-1](https://github.com/jess-moss/koch-v1-1) as an actual robot for evaluating policy performacne.
-I appreciate these refenrence implementations!
