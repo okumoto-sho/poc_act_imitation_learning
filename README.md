@@ -18,7 +18,9 @@
 
   |||
   |----|----|
+  |GPU|Intelr Core i7| 
   |GPU|NVIDIA GeForce RTX 2070|
+  |Size of memory|32 GB|
   |Number of epochs | 500 |
   |Training sample size|60|
   |Batch size|8|
