@@ -18,7 +18,7 @@
 
   |||
   |----|----|
-  |GPU|Intelr Core i7| 
+  |GPU|Intel Core i7| 
   |GPU|NVIDIA GeForce RTX 2070|
   |Size of memory|32 GB|
   |Number of epochs | 500 |
