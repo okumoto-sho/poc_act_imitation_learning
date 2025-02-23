@@ -31,6 +31,7 @@ def read_one_step_data(
     action_chunk_size: int,
     camera_devices: List[int],
     h5_dataset_path: str,
+    image_size=(480, 640, 3),
 ):
     data = {}
     with h5py.File(h5_dataset_path, "r") as f:
@@ -41,7 +42,9 @@ def read_one_step_data(
                 return None
             cap.set(cv.CAP_PROP_POS_FRAMES, frame_index)
             ret, frame = cap.read()
-            data[f"/images/{camera_device}"] = frame
+            data[f"/images/{camera_device}"] = cv.resize(
+                frame, (image_size[1], image_size[0])
+            )
 
         data["qpos"] = f["/observations/qpos"][frame_index, ...]
         data["action"] = f["/action"][frame_index : frame_index + action_chunk_size]
@@ -58,6 +61,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         random_sampling: bool = True,
         index_offset=0,
         device: str = "cuda:0",
+        image_size=(480, 640, 3),
     ):
         super(EpisodicDataset).__init__()
         self.dataset_dir = dataset_dir
@@ -67,6 +71,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         self.random_sampling = random_sampling
         self.device = device
         self.index_offset = index_offset
+        self.image_size = image_size
 
     def __len__(self):
         return self.num_episodes
@@ -90,6 +95,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 self.action_chunk_size,
                 self.camera_names,
                 episode_path,
+                self.image_size,
             )
             images = {}
             for camera_name in self.camera_names:

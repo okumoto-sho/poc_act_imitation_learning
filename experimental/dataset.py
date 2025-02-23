@@ -16,12 +16,13 @@ def stream_image(
     action_chunk_size: int,
     camera_devices: List[int],
     h5_dataset_path_candidates: List[str],
+    image_size: Tuple[int, int, int],
 ):
     while not stop_event.is_set():
         h5_dataset_path = np.random.choice(h5_dataset_path_candidates)
         frame_index = np.random.randint(0, episode_len)
         data = read_one_step_data(
-            frame_index, action_chunk_size, camera_devices, h5_dataset_path
+            frame_index, action_chunk_size, camera_devices, h5_dataset_path, image_size
         )
         data_queue.try_put(data)
 
@@ -58,6 +59,7 @@ class BatchStreamingQueue:
         self.device = device
         self.index_offset = index_offset
         self.batch_size = batch_size
+        self.image_size = image_size
         self.queue_data_structure = {
             f"/images/{camera_name}": EntryType(np.uint8, image_size)
             for camera_name in camera_names
@@ -87,6 +89,7 @@ class BatchStreamingQueue:
                             (worker_index + 1) * covered_indexes_per_worker,
                         )
                     ],
+                    self.image_size,
                 ),
             )
             p.start()
