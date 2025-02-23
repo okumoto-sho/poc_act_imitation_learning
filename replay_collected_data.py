@@ -3,15 +3,14 @@ import cv2 as cv
 import time
 
 from koch11.dynamixel.koch11 import make_follower_client
-from teleoperation_config import teleoperation_config, camera_device_names
+from teleoperation_config import teleoperation_config
 from dataset import read_h5_dataset
 
 
 def main(args):
     cameras_config = teleoperation_config["camera_configs"]
-    dataset_dict = read_h5_dataset(
-        args.dataset_path, camera_device_names=camera_device_names
-    )
+    device_names = [config["device_name"] for config in cameras_config]
+    dataset_dict = read_h5_dataset(args.dataset_path, device_names)
 
     if args.move_robot:
         follower = make_follower_client()
@@ -23,7 +22,7 @@ def main(args):
     for i in range(len(dataset_dict["action"])):
         start = time.time()
         for cam in cameras_config:
-            image = dataset_dict[f"images/{cam['device_name']}"][i]
+            image = dataset_dict[f"/images/{cam['device_name']}"][i]
             cv.imshow(str(cam["device_name"]), image)
 
         if args.move_robot:

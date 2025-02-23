@@ -10,7 +10,7 @@ from koch11.camera import Camera
 
 
 def execute_single_teleoperation_step(
-    episode_id: int, task_name: str, dataset_dir: str, follower, leader, cameras
+    episode_id: int, dataset_dir: str, follower, leader, cameras
 ):
     # wait for press 'q' to start the data collection
     control_cycle = teleoperation_config["control_cycle"]
@@ -37,7 +37,7 @@ def execute_single_teleoperation_step(
     }
     for cam in teleoperation_config["camera_configs"]:
         data_dict[f"/observations/images/{cam['device_name']}"] = np.zeros(
-            shape=(max_time_steps, cam["height"], cam["width"], 3)
+            shape=(max_time_steps, cam["height"], cam["width"], 3), dtype=np.uint8
         )
 
     # start the data collection
@@ -60,20 +60,35 @@ def execute_single_teleoperation_step(
         print(f"Coillecting data. Step: {step}, FPS: {1 / (end - start)}")
 
     #  save the collected data
-    with h5py.File(f"{dataset_dir}/{task_name}_{episode_id}.h5", "w") as f:
+    with h5py.File(f"{dataset_dir}/{episode_id}.h5", "w") as f:
         obs = f.create_group("observations")
         images = obs.create_group("images")
         for cam in teleoperation_config["camera_configs"]:
             images.create_dataset(
                 f"{cam['device_name']}",
-                (max_time_steps, cam["height"], cam["width"], 3),
-                dtype="uint8",
+                data=f"{dataset_dir}/images/{episode_id}_{cam['device_name']}.mp4",
             )
         obs.create_dataset("qpos", (max_time_steps, 6), dtype="float32")
         f.create_dataset("action", (max_time_steps, 6), dtype="float32")
 
-        for name, array in data_dict.items():
-            f[name][...] = array
+        f["/observations/qpos"][:] = data_dict["/observations/qpos"]
+        f["/action"][:] = data_dict["/action"]
+        for cam in teleoperation_config["camera_configs"]:
+            out = cv.VideoWriter(
+                f"{dataset_dir}/images/{episode_id}_{cam['device_name']}.mp4",
+                cv.VideoWriter_fourcc(*"mp4v"),
+                1.0 / teleoperation_config["control_cycle"],
+                (cam["width"], cam["height"]),
+            )
+            if not out.isOpened():
+                raise ValueError(
+                    f"Error: Cannot open {episode_id}_{cam['device_name']}.mp4"
+                )
+
+            for step in range(max_time_steps):
+                frame = data_dict[f"/observations/images/{cam['device_name']}"][step, :]
+                out.write(frame)
+            out.release()
 
 
 def main(args):
@@ -93,7 +108,7 @@ def main(args):
         args.initial_episode_id, args.initial_episode_id + args.num_episodes
     ):
         execute_single_teleoperation_step(
-            episode_id, args.task_name, args.dataset_dir, follower, leader, cameras
+            episode_id, args.dataset_dir, follower, leader, cameras
         )
 
 
@@ -101,7 +116,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--initial_episode_id", type=int, default=0)
     parser.add_argument("--dataset_dir", type=str, default="train_dataset")
-    parser.add_argument("--task_name", type=str, default="teleoperation")
     parser.add_argument("--num_episodes", type=int, default=50)
     args = parser.parse_args()
     main(args)
