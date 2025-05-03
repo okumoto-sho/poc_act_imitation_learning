@@ -201,6 +201,23 @@ def _to_backbone_weights_option(pretrained: bool = True):
         return None
 
 
+def create_backbone(model_name: str, emb_dim: int, pretrained: bool = True):
+    if "res" in model_name:
+        return ResBackbone(
+            emb_dim=emb_dim,
+            model_name=model_name,
+            weights=_to_backbone_weights_option(pretrained),
+        )
+    elif "vit" in model_name:
+        return ViTBackbone(
+            emb_dim=emb_dim,
+            model_name=model_name,
+            weights=_to_backbone_weights_option(pretrained),
+        )
+    else:
+        raise ValueError(f"model_name {model_name} not in torchvision models")
+
+
 def create_resnet18_backbone(emb_dim: int, pretrained: bool = True):
     return ResBackbone(
         emb_dim=emb_dim,
