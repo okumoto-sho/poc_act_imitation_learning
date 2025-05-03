@@ -133,8 +133,9 @@ dmypy.json
 # records
 records/*
 
-# train_dataset
-train_dataset/*
+# dataset
+datasets/*/train/images/*.mp4
+datasets/*/test/images/*.mp4
 
-# test_dataset
-test_dataset/*
+# logs
+logs
