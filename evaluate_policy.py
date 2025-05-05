@@ -1,24 +1,31 @@
-import argparse
 import torch
 import time
 import numpy as np
 import cv2 as cv
 
+from absl import flags, app
 from koch11.dynamixel.robot_client import DynamixelRobotClient
 from teleoperation_config import teleoperation_config, camera_device_names
 from model_config import model_config
-from models import ActPolicy
+from models.act import ActPolicy
 from koch11.dynamixel.koch11 import make_follower_client
 from koch11.camera import Camera
 
+FLAGS = flags.FLAGS
+flags.DEFINE_string("checkpoint", "./checkpoints/act_policy.pth", "Checkpoint path")
+flags.DEFINE_integer("episode_len", 10000, "Episode length")
+flags.DEFINE_enum("dtype", "float16", ["float16", "float32"], "Data type")
+flags.DEFINE_bool("record", False, "Record video")
+flags.DEFINE_string("record_dir", "./records", "Record directory")
 
-def main(args):
-    if args.dtype == "float32":
+
+def main(_):
+    if FLAGS.dtype == "float32":
         dtype = torch.float32
-    elif args.dtype == "float16":
+    elif FLAGS.dtype == "float16":
         dtype = torch.float16
     else:
-        raise ValueError(f"Invalid dtype: {args.dtype}")
+        raise ValueError(f"Invalid dtype: {FLAGS.dtype}")
 
     policy = (
         ActPolicy(
@@ -37,13 +44,13 @@ def main(args):
         .to(dtype=dtype)
     )
 
-    checkpoint = args.checkpoint
+    checkpoint = FLAGS.checkpoint
     state_dict = torch.load(checkpoint)
     policy.load_state_dict(state_dict["parameters_state_dict"])
 
     policy.eval()
 
-    episode_len = args.episode_len
+    episode_len = FLAGS.episode_len
     cameras_configs = teleoperation_config["camera_configs"]
     cameras = {}
     for camera_config in cameras_configs:
@@ -57,15 +64,15 @@ def main(args):
     robot: DynamixelRobotClient = make_follower_client(
         teleoperation_config["follower_device"]
     )
-    robot.make_control_enable()
+    # robot.make_control_enable()
 
     # prepare vidoe capture
-    if args.record:
+    if FLAGS.record:
         out = {}
         for camera_config in cameras_configs:
             fourcc = cv.VideoWriter_fourcc(*camera_config["fourcc"])
             out[camera_config["device_name"]] = cv.VideoWriter(
-                f"{args.record_dir}/{camera_config['device_name']}.avi",
+                f"{FLAGS.record_dir}/{camera_config['device_name']}.avi",
                 fourcc,
                 30,
                 (camera_config["width"], camera_config["height"]),
@@ -97,7 +104,7 @@ def main(args):
             )
             images[camera_name] = images_data
             cv.imshow(camera_name, image)
-            if args.record:
+            if FLAGS.record:
                 out[camera_name].write(image)
 
         with torch.inference_mode():
@@ -129,11 +136,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint", type=str)
-    parser.add_argument("--episode_len", type=int, default=10000)
-    parser.add_argument("--dtype", type=str, default="float16")
-    parser.add_argument("--record", action="store_true")
-    parser.add_argument("--record_dir", type=str, default="./records")
-    args = parser.parse_args()
-    main(args)
+    app.run(main)
