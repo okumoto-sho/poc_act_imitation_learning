@@ -1,12 +1,13 @@
 import cv2 as cv
 import time
-import h5py
 import numpy as np
 
 from absl import flags, app
 from koch11.dynamixel.koch11 import make_leader_client, make_follower_client
 from teleoperation_config import teleoperation_config
 from koch11.camera import Camera
+from dataset import save_one_episode_data
+from typing import List
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("initial_episode_id", 0, "Initial episode ID.")
@@ -19,7 +20,7 @@ flags.DEFINE_integer(
 
 
 def execute_single_teleoperation_step(
-    episode_id: int, dataset_dir: str, follower, leader, cameras
+    episode_id: int, dataset_dir: str, follower, leader, cameras: List[Camera]
 ):
     # wait for press 'q' to start the data collection
     control_cycle = teleoperation_config["control_cycle"]
@@ -31,21 +32,20 @@ def execute_single_teleoperation_step(
             frame = camera.read(flip=True)
             cv.imshow(f"Frame {camera.device_name}", frame)
         end = time.time()
-        command_q = leader.get_present_q()
-        follower.servo_q(command_q)
+        action = leader.get_present_q()
+        follower.servo_q(action)
 
         if (end - start) < control_cycle:
             time.sleep(control_cycle - (end - start))
         print(f"FPS: {1 / (end - start)}")
 
-    # prepare the data dictionary
+    # prepare data buffers
     max_time_steps = teleoperation_config["episode_len_time_steps"]
-    data_dict = {
-        "/observations/qpos": np.zeros(shape=(max_time_steps, 6)),
-        "/action": np.zeros(shape=(max_time_steps, 6)),
-    }
+    qpos_data = np.zeros(shape=(max_time_steps, 6), dtype=np.float32)
+    action_data = np.zeros(shape=(max_time_steps, 6), dtype=np.float32)
+    images_data = {}
     for cam in teleoperation_config["camera_configs"]:
-        data_dict[f"/observations/images/{cam['device_name']}"] = np.zeros(
+        images_data[cam["device_name"]] = np.zeros(
             shape=(max_time_steps, cam["height"], cam["width"], 3), dtype=np.uint8
         )
 
@@ -54,50 +54,29 @@ def execute_single_teleoperation_step(
     for step in range(max_time_steps):
         start = time.time()
         qpos = follower.get_present_q()
-        command_q = leader.get_present_q()
+        action = leader.get_present_q()
 
-        data_dict["/observations/qpos"][step, :] = qpos
-        data_dict["/action"][step, :] = command_q
+        qpos_data[step, :] = qpos
+        action_data[step, :] = action
         for camera in cameras:
             frame = camera.read(flip=True)
-            data_dict[f"/observations/images/{camera.device_name}"][step, :] = frame
+            images_data[camera.device_name][step, :] = frame
 
-        follower.servo_q(command_q)
+        follower.servo_q(action)
         end = time.time()
         if (end - start) < control_cycle:
             time.sleep(control_cycle - (end - start))
         print(f"Coillecting data. Step: {step}, FPS: {1 / (end - start)}")
 
     #  save the collected data
-    with h5py.File(f"{dataset_dir}/{episode_id}.h5", "w") as f:
-        obs = f.create_group("observations")
-        images = obs.create_group("images")
-        for cam in teleoperation_config["camera_configs"]:
-            images.create_dataset(
-                f"{cam['device_name']}",
-                data=f"{dataset_dir}/images/{episode_id}_{cam['device_name']}.mp4",
-            )
-        obs.create_dataset("qpos", (max_time_steps, 6), dtype="float32")
-        f.create_dataset("action", (max_time_steps, 6), dtype="float32")
-
-        f["/observations/qpos"][:] = data_dict["/observations/qpos"]
-        f["/action"][:] = data_dict["/action"]
-        for cam in teleoperation_config["camera_configs"]:
-            out = cv.VideoWriter(
-                f"{dataset_dir}/images/{episode_id}_{cam['device_name']}.mp4",
-                cv.VideoWriter_fourcc(*"mp4v"),
-                1.0 / teleoperation_config["control_cycle"],
-                (cam["width"], cam["height"]),
-            )
-            if not out.isOpened():
-                raise ValueError(
-                    f"Error: Cannot open {episode_id}_{cam['device_name']}.mp4"
-                )
-
-            for step in range(max_time_steps):
-                frame = data_dict[f"/observations/images/{cam['device_name']}"][step, :]
-                out.write(frame)
-            out.release()
+    save_one_episode_data(
+        dataset_dir=dataset_dir,
+        episode_id=episode_id,
+        qpos_data=qpos_data,
+        action_data=action_data,
+        images_data=images_data,
+        control_cycle=control_cycle,
+    )
 
 
 def main(_):
