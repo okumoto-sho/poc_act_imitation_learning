@@ -27,6 +27,9 @@ flags.DEFINE_string("checkpoints_dir", "./checkpoints", "checkpoints directory")
 flags.DEFINE_float("learning_rate", 1e-5, "learning rate")
 flags.DEFINE_integer("batch_size", 8, "batch size")
 flags.DEFINE_string("tensorboard_log_dir", "./logs", "log directory")
+flags.DEFINE_integer(
+    "checkpoint_interval", 100, "Save checkpoint at this interval per epochs"
+)
 
 
 def main(_):
@@ -90,7 +93,7 @@ def main(_):
             writer.add_scalar("train/loss_l2", output.loss_l2.item(), global_steps)
             writer.add_scalar("train/loss_kl", output.loss_kl.item(), global_steps)
 
-        if epoch % 50 == 0:
+        if epoch % FLAGS.checkpoint_interval == 0:
             torch.save(
                 {
                     "epoch": epoch,
