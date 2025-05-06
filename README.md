@@ -87,6 +87,21 @@ poetry install
 python teleoperation_and_data_collection.py --dataset_dir ./train_dataset --initial_episode_id 0
 ```
 
+## Push collected datasets to the huggingface dataset repository 
+1. - Login to your huggingface account first by runnning
+```
+huggingface-cli login
+```
+2. - Run the following command to push `datasets` directory into the huggingface dataset repository:
+```
+huggingface-cli upload <your_repository_id> <local_path_to_your_dataset>  --repo-type dataset
+```
+
+3. - To clone the pushed datasets from huggingface dataset repository, run the following command:
+```
+huggingface-cli download <your_repository_id> --local-dir <local_path_to_your_dataset> --repo-type dataset
+```
+
 ## ACT training
 - To train ACT from scratch, run
 ```
