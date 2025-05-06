@@ -1,12 +1,21 @@
-import argparse
 import cv2 as cv
 import time
 import h5py
 import numpy as np
 
+from absl import flags, app
 from koch11.dynamixel.koch11 import make_leader_client, make_follower_client
 from teleoperation_config import teleoperation_config
 from koch11.camera import Camera
+
+FLAGS = flags.FLAGS
+flags.DEFINE_integer("initial_episode_id", 0, "Initial episode ID.")
+flags.DEFINE_string(
+    "dataset_dir", "./datasets/pick_and_place/train", "Directory to save the dataset."
+)
+flags.DEFINE_integer(
+    "num_episodes", 50, "Number of episodes to collect data for teleoperation."
+)
 
 
 def execute_single_teleoperation_step(
@@ -91,7 +100,7 @@ def execute_single_teleoperation_step(
             out.release()
 
 
-def main(args):
+def main(_):
     # setting robots
     follower = make_follower_client(teleoperation_config["follower_device"])
     follower.make_control_enable()
@@ -105,17 +114,12 @@ def main(args):
 
     # Repeat the teleoperation and data collection for the specified number of episodes
     for episode_id in range(
-        args.initial_episode_id, args.initial_episode_id + args.num_episodes
+        FLAGS.initial_episode_id, FLAGS.initial_episode_id + FLAGS.num_episodes
     ):
         execute_single_teleoperation_step(
-            episode_id, args.dataset_dir, follower, leader, cameras
+            episode_id, FLAGS.dataset_dir, follower, leader, cameras
         )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--initial_episode_id", type=int, default=0)
-    parser.add_argument("--dataset_dir", type=str, default="train_dataset")
-    parser.add_argument("--num_episodes", type=int, default=50)
-    args = parser.parse_args()
-    main(args)
+    app.run(main)

@@ -18,8 +18,8 @@ camera_config_2: dict = {
 }
 
 teleoperation_config: dict = {
-    "leader_device": "/dev/ttyACM0",
-    "follower_device": "/dev/ttyACM1",
+    "leader_device": "/dev/ttyACM1",
+    "follower_device": "/dev/ttyACM2",
     "episode_len_time_steps": 500,
     "control_cycle": 0.025,
     "camera_configs": [camera_config_1, camera_config_2],

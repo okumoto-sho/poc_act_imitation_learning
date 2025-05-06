@@ -12,12 +12,12 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer("num_epochs", 10000, "number of epochs to train")
 flags.DEFINE_string(
     "train_dataset_dir",
-    "./train_dataset/pick_and_place_two_cameras/",
+    "./datasets/pick_and_place/train",
     "Dataset directory for training",
 )
 flags.DEFINE_string(
     "test_dataset_dir",
-    "./test_dataset/pick_and_place_two_cameras/",
+    "./datasets/pick_and_place/test",
     "Dataset directory for testing",
 )
 flags.DEFINE_integer("num_episodes_train", 24, "number of episodes to train")
