@@ -6,12 +6,11 @@ authors = ["Sho Okumoto <lebesgue0118@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.10,<3.13"
 dynamixel-sdk = "^3.7.31"
 tqdm = "^4.67.1"
-numpy = "1.26.4"
+numpy = "^2.0.0"
 scipy = "^1.15.1"
-genesis-world = "^0.2.1"
 torch = "^2.5.1"
 flake8 = "^7.1.1"
 autopep8 = "^2.3.2"
@@ -28,6 +27,8 @@ robomimic = "^0.3.0"
 diffusers = "^0.33.1"
 tensorboard = "^2.19.0"
 huggingface-hub = "^0.30.2"
+genesis-world = {git = "https://github.com/Genesis-Embodied-AI/Genesis", rev = "main"}
+rerun-sdk = "^0.23.2"
 
 
 [build-system]
