@@ -9,6 +9,8 @@ follower.make_control_enable()
 follower.move_q(np.array([0, 0, 0, 0, 0, 0]), speed=2.0)
 
 leader = make_leader_client()
+q_pos = leader.get_present_q()
+follower.move_q(q_pos, speed=2.0)
 
 while True:
     start = time.time()
